@@ -26,8 +26,6 @@ import org.entando.kubernetes.controller.integrationtest.support.TestFixturePrep
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
 import org.entando.kubernetes.model.DbmsImageVendor;
-import org.entando.kubernetes.model.DoneableEntandoCustomResource;
-import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
@@ -104,12 +102,11 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
-        Resource<EntandoKeycloakServer, DoneableEntandoKeycloakServer> keycloakGettable =
-                EntandoKeycloakServerOperationFactory
-                        .produceAllEntandoKeycloakServers(getKubernetesClient()).inNamespace(NAMESPACE).withName(KEYCLOAK_NAME);
-        await().ignoreExceptions().atMost(120, TimeUnit.SECONDS).until(() -> hasFinished(keycloakGettable));
-        EntandoKeycloakServer entandoKeycloakServer = keycloakGettable.get();
-        assertThat(entandoKeycloakServer.getMetadata().getOwnerReferences().get(0).getUid(), is(app.getMetadata().getUid()));
+        Resource<EntandoKeycloakServer, DoneableEntandoKeycloakServer> keycloakGettable = EntandoKeycloakServerOperationFactory
+                .produceAllEntandoKeycloakServers(getKubernetesClient()).inNamespace(NAMESPACE).withName(KEYCLOAK_NAME);
+        await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
+                () -> keycloakGettable.get().getMetadata().getOwnerReferences().get(0).getUid().equals(app.getMetadata().getUid())
+        );
         //and the EntandoKeycloakServer resource's identifying information has been passed to the controller Pod
         assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(theKeycloakControllerPod)),
                 is(Action.ADDED.name()));
@@ -124,7 +121,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 EntandoCompositeAppOperationFactory
                         .produceAllEntandoCompositeApps(client)
                         .inNamespace(client.getNamespace()).withName(MY_APP);
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(
+        await().ignoreExceptions().atMost(120, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodStatus() != null
         );
         //And the plugin controller pod
@@ -137,10 +134,9 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
         Resource<EntandoPlugin, DoneableEntandoPlugin> pluginGettable = EntandoPluginOperationFactory
                 .produceAllEntandoPlugins(getKubernetesClient()).inNamespace(NAMESPACE).withName(PLUGIN_NAME);
-        await().ignoreExceptions().atMost(120, TimeUnit.SECONDS).until(() -> hasFinished(pluginGettable));
-
-        EntandoPlugin entandoPlugin = pluginGettable.get();
-        assertThat(entandoPlugin.getMetadata().getOwnerReferences().get(0).getUid(), is(app.getMetadata().getUid()));
+        await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
+                () -> pluginGettable.get().getMetadata().getOwnerReferences().get(0).getUid(), is(app.getMetadata().getUid())
+        );
         //and the EntandoKeycloakServer resource's identifying information has been passed to the controller Pod
         assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(thePluginControllerPod)), is(Action.ADDED.name()));
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAME").on(thePrimaryContainerOn(thePluginControllerPod)),
@@ -150,14 +146,14 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         //With the correct version specified
         assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
         //And its status reflecting on the EntandoCompositeApp
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(
+        await().ignoreExceptions().atMost(120, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodStatus() != null
         );
         //And the EntandoCompositeApp is in a finished state
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> hasFinished(appGettable));
     }
 
-    private boolean hasFinished(Resource<? extends EntandoBaseCustomResource, ? extends DoneableEntandoCustomResource> appGettable) {
+    private boolean hasFinished(Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable) {
         EntandoDeploymentPhase phase = appGettable.fromServer().get().getStatus().getEntandoDeploymentPhase();
         return phase == EntandoDeploymentPhase.SUCCESSFUL || phase == EntandoDeploymentPhase.FAILED;
     }

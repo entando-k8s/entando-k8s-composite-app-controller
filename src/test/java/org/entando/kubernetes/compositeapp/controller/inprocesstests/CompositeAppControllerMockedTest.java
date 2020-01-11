@@ -2,7 +2,6 @@ package org.entando.kubernetes.compositeapp.controller.inprocesstests;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -38,9 +37,9 @@ import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 @EnableRuleMigrationSupport
 public class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTest implements PodBehavior {
 
-    private Class<? extends EntandoBaseCustomResource> classToFail;
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
+    private Class<? extends EntandoBaseCustomResource> classToFail;
     private EntandoCompositeAppController entandoCompositeAppController;
 
     @Override
@@ -54,11 +53,12 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
     }
 
     @Override
-    protected void performCreate(EntandoCompositeApp resource) {
-        generateUidAndCreate(resource);
-        prepareSystemProperties(resource);
-        emulatePodBehavior(resource.getSpec().getComponents());
+    protected EntandoCompositeApp performCreate(EntandoCompositeApp resource) {
+        EntandoCompositeApp created = generateUidAndCreate(resource);
+        prepareSystemProperties(created);
+        emulatePodBehavior(created.getSpec().getComponents());
         startController();
+        return created;
     }
 
     @BeforeEach
@@ -79,7 +79,7 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
         //And the WebServerStatus associated with the Plugin has failed
         assertThat(EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
                 .inNamespace(getKubernetesClient().getNamespace()).withName(MY_APP).get().getStatus().forServerQualifiedBy(PLUGIN_NAME)
-                .get().hasFailed(),is(true));
+                .get().hasFailed(), is(true));
 
     }
 
@@ -93,11 +93,11 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
         System.setProperty(KubeUtils.ENTANDO_RESOURCE_NAME, resource.getMetadata().getName());
     }
 
-    private void generateUidAndCreate(EntandoCompositeApp resource) {
+    private EntandoCompositeApp generateUidAndCreate(EntandoCompositeApp resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
-        EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
+        return EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
                 .inNamespace(getKubernetesClient().getNamespace()).create(resource);
     }
 

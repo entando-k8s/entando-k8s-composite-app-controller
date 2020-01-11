@@ -2,44 +2,61 @@ package org.entando.kubernetes.compositeapp.controller.interprocesstests;
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
-import io.quarkus.runtime.StartupEvent;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
+import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
-import org.junit.jupiter.api.BeforeAll;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 
 @Tag("inter-process")
 public class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControllerTest {
 
-    private NamespacedKubernetesClient client;
+    private final DefaultKubernetesClient client = new DefaultKubernetesClient();
+    private final EntandoCompositeAppIntegrationTestHelper myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
 
-    private static NamespacedKubernetesClient newClient() {
-        return new DefaultKubernetesClient().inNamespace(NAMESPACE);
-    }
-
-    @BeforeAll
-    public static void prepareController() {
-        if (EntandoOperatorTestConfig.getTestTarget() == TestTarget.STANDALONE) {
-            new EntandoCompositeAppController(newClient()).onStartup(new StartupEvent());
-        } else {
-            //Should be installed by helm chart in pipeline
-        }
-    }
-
+    @Override
     protected KubernetesClient getKubernetesClient() {
-        if (this.client == null) {
-            this.client = newClient();
+        return client.inNamespace(NAMESPACE);
+    }
+
+    @BeforeEach
+    public void cleanup() {
+        TestFixturePreparation.prepareTestFixture(getKubernetesClient(),
+                deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
+        registerListeners();
+    }
+
+    private void registerListeners() {
+        if (EntandoOperatorTestConfig.getTestTarget() == TestTarget.K8S) {
+            myHelper.listenAndRespondWithImageVersionUnderTest(NAMESPACE);
+        } else {
+            EntandoCompositeAppController controller = new EntandoCompositeAppController(getKubernetesClient(), false);
+            myHelper.listenAndRespondWithStartupEvent(NAMESPACE, controller::onStartup);
         }
-        return this.client;
+    }
+
+    @AfterEach
+    public void stopListening() {
+        myHelper.afterTest();
+        client.close();
     }
 
     @Override
-    protected void performCreate(EntandoCompositeApp resource) {
-
+    protected EntandoCompositeApp performCreate(EntandoCompositeApp resource) {
+        return EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
+                .inNamespace(NAMESPACE)
+                .create(resource);
     }
 
 }

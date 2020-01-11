@@ -29,11 +29,7 @@ public class CompositeAppControllerIntegratedTest extends AbstractCompositeAppCo
 
     @BeforeEach
     public void cleanup() {
-        TestFixturePreparation.prepareTestFixture(getKubernetesClient(),
-                deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
+        clearNamespace();
         registerListeners();
     }
 

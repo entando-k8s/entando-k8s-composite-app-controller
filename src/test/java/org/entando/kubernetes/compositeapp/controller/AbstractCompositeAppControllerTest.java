@@ -59,7 +59,6 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
     @Test
     public void testExecuteControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
-        TestFixturePreparation.prepareTestFixture(getKubernetesClient(), deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
         KubernetesClient client = getKubernetesClient();
         //and the Coordinator observes this namespace
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
@@ -153,6 +152,14 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> hasFinished(appGettable));
     }
 
+    protected void clearNamespace() {
+        TestFixturePreparation.prepareTestFixture(getKubernetesClient(),
+                deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
+    }
+
     private boolean hasFinished(Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable) {
         EntandoDeploymentPhase phase = appGettable.fromServer().get().getStatus().getEntandoDeploymentPhase();
         return phase == EntandoDeploymentPhase.SUCCESSFUL || phase == EntandoDeploymentPhase.FAILED;
@@ -177,7 +184,6 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
 
     @Test
     public void testExecuteControllerObject() {
-        TestFixturePreparation.prepareTestFixture(getKubernetesClient(), deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE));
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
                 getKubernetesClient().getNamespace());
         EntandoCompositeApp app = new EntandoCompositeAppBuilder()

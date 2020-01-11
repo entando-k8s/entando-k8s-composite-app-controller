@@ -63,6 +63,7 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
 
     @BeforeEach
     void setUp() {
+        clearNamespace();
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }
 

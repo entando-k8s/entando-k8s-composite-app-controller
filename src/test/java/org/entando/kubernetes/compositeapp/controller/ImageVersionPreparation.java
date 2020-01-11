@@ -23,7 +23,7 @@ public class ImageVersionPreparation {
                 .fromServer().get();
         if (versionConfigMap == null) {
             getKubernetesClient().configMaps().inNamespace(getConfigMapNamespace()).createNew().withNewMetadata().withName(
-                    getVersionsConfigMapName()).endMetadata()
+                    getVersionsConfigMapName()).withNamespace(getConfigMapNamespace()).endMetadata()
                     .addToData(imageName, format(
                             "{\"version\":\"%s\"}",
                             fallbackVersion)).done();

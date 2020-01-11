@@ -11,6 +11,7 @@
     <option name="MAIN_CLASS_NAME" value="org.entando.kubernetes.compositeapp.controller.inprocesstests.CompositeAppControllerMockedTest" />
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="tags" />
+    <option name="VM_PARAMETERS" value="-ea -Dentando.k8s.operator.configmap.namespace=entando" />
     <option name="PARAMETERS" value="" />
     <tag value="in-process" />
     <method v="2">

@@ -1,0 +1,40 @@
+apiVersion: skaffold/v1beta2
+kind: Config
+build:
+  artifacts:
+  - image: entando/entando-k8s-composite-app-controller
+    context: .
+    docker: {}
+  tagPolicy:
+    envTemplate:
+      template: '{{.DOCKER_REGISTRY}}/{{.IMAGE_NAME}}:{{.VERSION}}'
+  local: {}
+deploy:
+  kubectl: {}
+profiles:
+- name: jvm
+  build:
+    artifacts:
+    - image: entando/entando-k8s-composite-app-controller
+      docker:
+        dockerfile: Dockerfile.jvm
+- name: native
+  build:
+    artifacts:
+    - image: entando/entando-k8s-composite-app-controller
+      docker:
+        dockerfile: Dockerfile.native
+- name: dev
+  build:
+    tagPolicy:
+      envTemplate:
+        template: '{{.DOCKER_REGISTRY}}/{{.IMAGE_NAME}}:{{.DIGEST_HEX}}'
+    local: {}
+  deploy:
+    helm:
+      releases:
+      - name: entando-k8s-composite-app-controller
+        chartPath: charts/entando-k8s-composite-app-controller
+        setValueTemplates:
+          image.repository: '{{.DOCKER_REGISTRY}}/{{.IMAGE_NAME}}'
+          image.tag: '{{.DIGEST_HEX}}'

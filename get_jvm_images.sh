@@ -1,0 +1,1 @@
+kubectl get cm image-versions -n entando -o yaml|awk -F: '/jvm/ {print $1}'

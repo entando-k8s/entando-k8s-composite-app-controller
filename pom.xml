@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.entando.kubernetes</groupId>
+        <artifactId>entando-k8s-infrastructure-parent</artifactId>
+        <version>6.0.17</version>
+    </parent>
+    <version>6.0.0-SNAPSHOT</version>
+    <artifactId>entando-k8s-composite-app-controller</artifactId>
+    <name>Entando K8S Controller Coordinator</name>
+    <description>Entando's K8S Controller Coordinator</description>
+    <inceptionYear>2019</inceptionYear>
+    <url>https://central.entando.com</url>
+
+    <licenses>
+        <license>
+            <name>GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1, February 1999</name>
+            <url>https://www.gnu.org/licenses/lgpl-2.1.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <organization>
+        <name>Entando Inc.</name>
+        <url>http://www.entando.com/</url>
+    </organization>
+    <repositories>
+        <repository>
+            <id>jx-releases</id>
+            <url>https://nexus-jx.apps.serv.run/repository/maven-releases/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <scm>
+        <connection>scm:git:git@github.com:${github.organization}/${project.artifactId}.git</connection>
+        <developerConnection>scm:git:git@github.com:${github.organization}//${project.artifactId}.git
+        </developerConnection>
+        <url>https://github.com/${github.organization}//${project.artifactId}/</url>
+        <tag>HEAD</tag>
+    </scm>
+    <properties>
+        <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
+        <entando.k8s.operator.common.version>6.0.72</entando.k8s.operator.common.version>
+        <entando.k8s.custom.model.version>6.0.37</entando.k8s.custom.model.version>
+    </properties>
+    <issueManagement>
+        <system>Github</system>
+        <url>https://github.com/${github.organization}/${project.artifactId}/issues/</url>
+    </issueManagement>
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>entando-k8s-custom-model</artifactId>
+            <version>${entando.k8s.custom.model.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>entando-k8s-operator-common</artifactId>
+            <version>${entando.k8s.operator.common.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-kubernetes-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-core</artifactId>
+        </dependency>
+
+        <!-- </required-by dependency="org.keycloakserver:keycloakserver-admin-client"> -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jaxrs</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jackson2-provider</artifactId>
+        </dependency>
+        <!-- </required-by> -->
+
+        <!-- Test-scoped dependencies. -->
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <!-- test dependencies-->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-migrationsupport</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-server-mock</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>entando-k8s-operator-common</artifactId>
+            <version>${entando.k8s.operator.common.version}</version>
+            <scope>test</scope>
+            <type>test-jar</type>
+            <classifier>tests</classifier>
+        </dependency>
+    </dependencies>
+    <profiles>
+        <profile>
+            <id>native</id>
+            <properties>
+                <!--NB!!! the format of this property value is extremely important: comma separated, no spaces, no linebreaks -->
+                <quarkus.native.additional-build-args>
+                    --report-unsupported-elements-at-runtime,-H:ReflectionConfigurationFiles=reflection-config.json,-H:ResourceConfigurationFiles=resources-config.json,-H:DynamicProxyConfigurationFiles=proxy-config.json
+                </quarkus.native.additional-build-args>
+            </properties>
+        </profile>
+    </profiles>
+</project>

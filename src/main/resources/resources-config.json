@@ -1,0 +1,16 @@
+{
+  "resources": [
+    {
+      "pattern": "crd/.*CRD.yaml"
+    },
+    {
+      "pattern": "top-level-domains.txt"
+    },
+    {
+      "pattern": "realm-base.json"
+    },
+    {
+      "pattern": "META-INF/services/javax\\.ws\\.rs\\.ext\\.Providers"
+    }
+  ]
+}

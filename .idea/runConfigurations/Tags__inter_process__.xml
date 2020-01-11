@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tags (inter-process )" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+    <module name="entando-k8s-composite-app-controller" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="org.entando.kubernetes.compositeapp.controller.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="PACKAGE_NAME" value="org.entando.kubernetes.compositeapp.controller.inprocesstests" />
+    <option name="MAIN_CLASS_NAME" value="org.entando.kubernetes.compositeapp.controller.inprocesstests.CompositeAppControllerMockedTest" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="tags" />
+    <option name="VM_PARAMETERS" value="-ea -Dentando.default.routing.suffix=apps.serv.run -Dentando.test.namespace.override=e6k8s-capp-controller -Dentando.test.name.suffix=911 -Dentando.docker.registry.override=docker-registry.default.svc:5000 -Dentando.k8s.operator.configmap.namespace=entando -Dentando.docker.image.version.default=6.0.0" />
+    <option name="PARAMETERS" value="" />
+    <tag value="inter-process" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

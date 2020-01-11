@@ -1,0 +1,10 @@
+.idea/libraries/
+.idea/sonarlint/
+.idea/*.xml
+target/
+*.iml
+.classpath
+.project
+.settings/
+classes/
+/src/test/resources/crd/examples/

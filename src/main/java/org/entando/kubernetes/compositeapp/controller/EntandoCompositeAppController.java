@@ -32,7 +32,7 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
     }
 
     /**
-     * This constructor is intended for in-process tests where we do not want the controller to exit automatically
+     * This constructor is intended for in-process tests where we do not want the controller to exit automatically.
      */
     public EntandoCompositeAppController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
         super(kubernetesClient, exitAutomatically);

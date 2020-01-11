@@ -17,6 +17,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.client.PodWatcher;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
+import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.PodClientDouble;
 import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
@@ -52,6 +53,12 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
         return server.getClient().inNamespace(AbstractCompositeAppControllerTest.NAMESPACE);
     }
 
+    private void ensureNamespace(KubernetesClient client, String namespace) {
+        if (client.namespaces().withName(namespace).get() == null) {
+            client.namespaces().createNew().withNewMetadata().withName(namespace).endMetadata().done();
+        }
+    }
+
     @Override
     protected EntandoCompositeApp performCreate(EntandoCompositeApp resource) {
         EntandoCompositeApp created = generateUidAndCreate(resource);
@@ -63,6 +70,7 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
 
     @BeforeEach
     void setUp() {
+        EntandoOperatorConfig.getOperatorConfigMapNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(),s));
         clearNamespace();
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }

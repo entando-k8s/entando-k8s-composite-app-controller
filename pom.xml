@@ -9,8 +9,8 @@
     </parent>
     <version>6.0.0-SNAPSHOT</version>
     <artifactId>entando-k8s-composite-app-controller</artifactId>
-    <name>Entando K8S Controller Coordinator</name>
-    <description>Entando's K8S Controller Coordinator</description>
+    <name>Entando K8S Composite App Controller</name>
+    <description>Entando K8S Composite App Controller</description>
     <inceptionYear>2019</inceptionYear>
     <url>https://central.entando.com</url>
 

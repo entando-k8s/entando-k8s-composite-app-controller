@@ -54,22 +54,22 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
                 component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
             }
             component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
-            k8sClient.entandoResources().putEntandoCustomResource(component);
-            if (component instanceof EntandoDatabaseService) {
-                new EntandoDatabaseServiceController(k8sClient).processEvent(Action.ADDED, (EntandoDatabaseService) component);
+            EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().putEntandoCustomResource(component);
+            if (storedComponent instanceof EntandoDatabaseService) {
+                new EntandoDatabaseServiceController(k8sClient).processEvent(Action.ADDED, (EntandoDatabaseService) storedComponent);
             } else {
                 Pod pod = executor.runControllerFor(
                         Action.ADDED,
-                        component,
-                        executor.resolveLatestImageFor(component.getClass()).orElseThrow(IllegalStateException::new)
+                        storedComponent,
+                        executor.resolveLatestImageFor(storedComponent.getClass()).orElseThrow(IllegalStateException::new)
                 );
-                WebServerStatus webServerStatus = new WebServerStatus(component.getMetadata().getName());
+                WebServerStatus webServerStatus = new WebServerStatus(storedComponent.getMetadata().getName());
                 webServerStatus.setPodStatus(pod.getStatus());
                 getClient().entandoResources().updateStatus(newCompositeApp, webServerStatus);
                 if (PodResult.of(pod).hasFailed()) {
-                    String message = format("Unexpected exception occurred while adding %s %s/%s", component.getKind(),
-                            component.getMetadata().getNamespace(),
-                            component.getMetadata().getName());
+                    String message = format("Unexpected exception occurred while adding %s %s/%s", storedComponent.getKind(),
+                            storedComponent.getMetadata().getNamespace(),
+                            storedComponent.getMetadata().getName());
                     this.logger.log(Level.SEVERE, message);
                     throw new EntandoControllerException(message);
                 }

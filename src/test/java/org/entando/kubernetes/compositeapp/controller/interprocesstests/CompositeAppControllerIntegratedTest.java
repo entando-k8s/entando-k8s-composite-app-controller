@@ -19,16 +19,18 @@ import org.junit.jupiter.api.Tag;
 @Tag("inter-process")
 public class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControllerTest {
 
-    private final DefaultKubernetesClient client = new DefaultKubernetesClient();
-    private final EntandoCompositeAppIntegrationTestHelper myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
+    private DefaultKubernetesClient client;
+    private EntandoCompositeAppIntegrationTestHelper myHelper;
 
     @Override
     protected KubernetesClient getKubernetesClient() {
-        return client.inNamespace(NAMESPACE);
+        return client;
     }
 
     @BeforeEach
     public void cleanup() {
+        this.client = (DefaultKubernetesClient) new DefaultKubernetesClient().inNamespace(NAMESPACE);
+        this.myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
         clearNamespace();
         registerListeners();
     }

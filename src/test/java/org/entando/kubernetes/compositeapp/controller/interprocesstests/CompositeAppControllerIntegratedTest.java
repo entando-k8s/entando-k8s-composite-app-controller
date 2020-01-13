@@ -29,7 +29,7 @@ public class CompositeAppControllerIntegratedTest extends AbstractCompositeAppCo
 
     @BeforeEach
     public void cleanup() {
-        this.client = (DefaultKubernetesClient) new DefaultKubernetesClient().inNamespace(NAMESPACE);
+        this.client = (DefaultKubernetesClient) TestFixturePreparation.newClient().inNamespace(NAMESPACE);
         this.myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
         clearNamespace();
         registerListeners();

@@ -174,12 +174,12 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
 
     protected String ensureKeycloakControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getKubernetesClient());
-        return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.37");
+        return imageVersionPreparation.ensureImageVersion("entando-k8s-keycloak-controller", "6.0.0");
     }
 
     protected String ensurePluginControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getKubernetesClient());
-        return imageVersionPreparation.ensureImageVersion("entando-k8s-plugin-controller", "6.0.24");
+        return imageVersionPreparation.ensureImageVersion("entando-k8s-plugin-controller", "6.0.0");
     }
 
     @Test

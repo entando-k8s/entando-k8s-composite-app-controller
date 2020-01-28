@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SonarLintProjectSettings">
+    <option name="bindingEnabled" value="true" />
+    <option name="projectKey" value="entando-k8s_entando-k8s-composite-app-controller" />
+    <option name="serverId" value="sonarcloud-entando-k8s" />
+  </component>
+</project>

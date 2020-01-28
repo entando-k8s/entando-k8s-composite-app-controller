@@ -38,7 +38,7 @@ public class ImageVersionPreparation {
     }
 
     private String getVersionsConfigMapName() {
-        return EntandoOperatorConfig.getEntandoDockerImageVersionsConfigMap();
+        return EntandoOperatorConfig.getEntandoDockerImageInfoConfigMap();
     }
 
     private String getConfigMapNamespace() {

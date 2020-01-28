@@ -1,5 +1,7 @@
 .idea/*
 !.idea/runConfigurations
+!.idea/sonarlint.xml
+!.idea/codeStyles
 target/
 *.iml
 .classpath

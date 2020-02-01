@@ -18,6 +18,7 @@ import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.controller.database.EntandoDatabaseServiceController;
 import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.WebServerStatus;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
@@ -47,14 +48,16 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
         processCommand();
     }
 
-    protected void processAddition(EntandoCompositeApp newCompositeApp) {
+    @Override
+    protected void synchronizeDeploymentState(EntandoCompositeApp newCompositeApp) {
         ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient);
         for (EntandoBaseCustomResource component : newCompositeApp.getSpec().getComponents()) {
             if (component.getMetadata().getNamespace() == null) {
                 component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
             }
             component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
-            EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().putEntandoCustomResource(component);
+            component.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.REQUESTED);
+            EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().createOrPatchEntandoResource(component);
             if (storedComponent instanceof EntandoDatabaseService) {
                 new EntandoDatabaseServiceController(k8sClient).processEvent(Action.ADDED, (EntandoDatabaseService) storedComponent);
             } else {

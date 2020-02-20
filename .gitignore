@@ -2,6 +2,7 @@
 !.idea/runConfigurations
 !.idea/sonarlint.xml
 !.idea/codeStyles
+!.idea/copyright
 target/
 *.iml
 .classpath

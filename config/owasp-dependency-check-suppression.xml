@@ -22,7 +22,7 @@
         this version of Quarkus has been linked to certain versions of K8S. The client only needs to upgrade to
         later versions of the K8S to avoid these vulnerabilities
       ]]></notes>
-        <gav>io.quarkus:quarkus-kubernetes-client:1.0.1.Final</gav>
+        <gav>io.quarkus:quarkus-kubernetes-client:1.2.0.Final</gav>
         <cpe>cpe:/a:kubernetes:kubernetes</cpe>
     </suppress>
     <suppress>

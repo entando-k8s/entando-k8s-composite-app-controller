@@ -1006,7 +1006,7 @@
     "allPublicFields": true
   },
   {
-    "name": "org.entando.kubernetes.model.DbmsImageVendor",
+    "name": "org.entando.kubernetes.model.DbmsVendor",
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
     "allDeclaredMethods": true,

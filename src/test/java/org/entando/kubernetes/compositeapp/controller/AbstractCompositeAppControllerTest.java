@@ -41,7 +41,7 @@ import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrati
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.controller.test.support.FluentTraversals;
 import org.entando.kubernetes.controller.test.support.VariableReferenceAssertions;
-import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
@@ -91,14 +91,14 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .withNewMetadata().withName(KEYCLOAK_NAME).withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
                 .withDefault(true)
-                .withDbms(DbmsImageVendor.NONE)
+                .withDbms(DbmsVendor.NONE)
                 .withIngressHostName(KEYCLOAK_NAME + "." + getDomainSuffix())
                 .endSpec()
                 .endEntandoKeycloakServer()
                 .addNewEntandoPlugin()
                 .withNewMetadata().withName(PLUGIN_NAME).endMetadata().withNewSpec()
                 .withImage("entando/entando-avatar-plugin")
-                .withDbms(DbmsImageVendor.POSTGRESQL)
+                .withDbms(DbmsVendor.POSTGRESQL)
                 .withReplicas(1)
                 .withIngressHostName(PLUGIN_NAME + "." + getDomainSuffix())
                 .withHealthCheckPath("/management/health")
@@ -208,7 +208,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .addNewEntandoDatabaseService()
                 .withNewMetadata().withName("test-database").withNamespace(getKubernetesClient().getNamespace()).endMetadata()
                 .withNewSpec()
-                .withDbms(DbmsImageVendor.ORACLE)
+                .withDbms(DbmsVendor.ORACLE)
                 .withHost("somedatabase.com")
                 .withPort(5050)
                 .withSecretName("oracle-secret")

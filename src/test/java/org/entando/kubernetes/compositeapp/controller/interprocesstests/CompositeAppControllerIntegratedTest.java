@@ -32,7 +32,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 
-@Tag("inter-process")
+@Tag("end-to-end")
 public class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControllerTest {
 
     private DefaultKubernetesClient client;

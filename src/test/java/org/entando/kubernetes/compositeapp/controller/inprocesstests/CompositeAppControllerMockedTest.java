@@ -50,7 +50,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tag("in-process")
+@Tag("in-process-component")
 @EnableRuleMigrationSupport
 public class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTest implements PodBehavior {
 

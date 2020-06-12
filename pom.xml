@@ -63,8 +63,8 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando.k8s.operator.common.version>6.1.7</entando.k8s.operator.common.version>
-        <entando.k8s.custom.model.version>6.1.4</entando.k8s.custom.model.version>
+        <entando.k8s.operator.common.version>6.1.9</entando.k8s.operator.common.version>
+        <entando.k8s.custom.model.version>6.1.5</entando.k8s.custom.model.version>
         <preDeploymentTestGroups>in-process-component</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
     </properties>

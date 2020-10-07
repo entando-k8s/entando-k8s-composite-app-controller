@@ -5,7 +5,7 @@ pipelineConfig:
       value: carc
     - name: TEST_DEPLOYMENT
       value: "true"
-    - name: ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP
+jx get b    - name: ENTANDO_DOCKER_IMAGE_INFO_CONFIGMAP
       value: "entando-docker-image-info-v6.1"
     - name: EXECUTABLE_TYPE
       valueFrom:

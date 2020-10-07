@@ -114,7 +114,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
+        await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
         Resource<EntandoKeycloakServer, DoneableEntandoKeycloakServer> keycloakGettable = EntandoKeycloakServerOperationFactory
@@ -144,7 +144,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
                 .withLabel("EntandoPlugin", app.getSpec().getComponents().get(1).getMetadata().getName());
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> pluginControllerList.list().getItems().size() > 0);
+        await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> pluginControllerList.list().getItems().size() > 0);
         Pod thePluginControllerPod = pluginControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
         Resource<EntandoPlugin, DoneableEntandoPlugin> pluginGettable = EntandoPluginOperationFactory
@@ -221,7 +221,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .services()
                 .inNamespace(getKubernetesClient().getNamespace())
                 .withLabel("EntandoDatabaseService", app.getSpec().getComponents().get(0).getMetadata().getName());
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
+        await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
         Service service = listable.list().getItems().get(0);
         assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
         Resource<EntandoDatabaseService, DoneableEntandoDatabaseService> entandoDatabaseServiceGettable =

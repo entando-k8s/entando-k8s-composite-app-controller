@@ -25,15 +25,13 @@ import org.entando.kubernetes.controller.integrationtest.support.EntandoOperator
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
-import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
-import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 
-@Tag("end-to-end")
-public class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControllerTest {
+@Tags({@Tag("end-to-end"), @Tag("inter-process"), @Tag("smoke-test"), @Tag("post-deployment")})
+class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControllerTest {
 
     private DefaultKubernetesClient client;
     private EntandoCompositeAppIntegrationTestHelper myHelper;

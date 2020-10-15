@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>6.2.3</version>
+        <version>6.2.5</version>
     </parent>
     <version>6.2.0-SNAPSHOT</version>
     <artifactId>entando-k8s-composite-app-controller</artifactId>
@@ -63,8 +63,8 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando.k8s.operator.common.version>6.2.17</entando.k8s.operator.common.version>
-        <entando.k8s.custom.model.version>6.2.2</entando.k8s.custom.model.version>
+        <entando-k8s-operator-common.version>6.2.20</entando-k8s-operator-common.version>
+        <entando-k8s-custom-model.version>6.2.5</entando-k8s-custom-model.version>
         <preDeploymentTestGroups>in-process-component</preDeploymentTestGroups>
         <postDeploymentTestGroups>end-to-end</postDeploymentTestGroups>
     </properties>
@@ -76,12 +76,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>entando-k8s-custom-model</artifactId>
-            <version>${entando.k8s.custom.model.version}</version>
+            <version>${entando-k8s-custom-model.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>entando-k8s-operator-common</artifactId>
-            <version>${entando.k8s.operator.common.version}</version>
+            <version>${entando-k8s-operator-common.version}</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -150,7 +150,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>entando-k8s-operator-common</artifactId>
-            <version>${entando.k8s.operator.common.version}</version>
+            <version>${entando-k8s-operator-common.version}</version>
             <scope>test</scope>
             <type>test-jar</type>
             <classifier>tests</classifier>

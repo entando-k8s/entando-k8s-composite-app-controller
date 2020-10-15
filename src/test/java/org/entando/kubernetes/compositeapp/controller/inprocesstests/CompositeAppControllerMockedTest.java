@@ -47,12 +47,13 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.migrationsupport.rules.EnableRuleMigrationSupport;
 
-@Tag("in-process-component")
+@Tags({@Tag("in-process"), @Tag("component"), @Tag("pre-deployment")})
 @EnableRuleMigrationSupport
-public class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTest implements PodBehavior {
+class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTest implements PodBehavior {
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
@@ -92,7 +93,7 @@ public class CompositeAppControllerMockedTest extends AbstractCompositeAppContro
     }
 
     @Test
-    public void testFailure() throws JsonProcessingException {
+    void testFailure() throws JsonProcessingException {
         //Given that EntandoPlugin deployments will fail
         this.classToFail = EntandoPlugin.class;
         //When I deploy the EntandoCompositeApp

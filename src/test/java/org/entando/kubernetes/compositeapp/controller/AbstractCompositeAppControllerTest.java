@@ -59,6 +59,7 @@ import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("java:S5786")//because it is actually used in subclasses in different packages
 public abstract class AbstractCompositeAppControllerTest implements FluentIntegrationTesting, FluentTraversals,
         VariableReferenceAssertions {
 
@@ -199,7 +200,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
     }
 
     @Test
-    public void testExecuteControllerObject() {
+    void testExecuteControllerObject() {
         System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
                 getKubernetesClient().getNamespace());
         EntandoCompositeApp app = new EntandoCompositeAppBuilder()

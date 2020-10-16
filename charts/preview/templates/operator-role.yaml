@@ -35,6 +35,12 @@ rules:
   - apiGroups:
       - ""
     resources:
+      - "pods/exec"
+    verbs:
+      - "get"
+  - apiGroups:
+      - ""
+    resources:
       - pods
       - services
       - endpoints

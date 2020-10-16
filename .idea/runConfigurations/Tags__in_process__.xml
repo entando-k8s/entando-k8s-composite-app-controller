@@ -1,0 +1,22 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tags (in-process )" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+    <module name="entando-k8s-composite-app-controller" />
+    <useClassPathOnly />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="org.entando.kubernetes.compositeapp.controller.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="PACKAGE_NAME" value="org.entando.kubernetes.compositeapp.controller.inprocesstests" />
+    <option name="MAIN_CLASS_NAME" value="org.entando.kubernetes.compositeapp.controller.inprocesstests.CompositeAppControllerMockedTest" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="tags" />
+    <option name="VM_PARAMETERS" value="-ea -Dentando.k8s.operator.configmap.namespace=entando" />
+    <option name="PARAMETERS" value="" />
+    <tag value="in-process" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

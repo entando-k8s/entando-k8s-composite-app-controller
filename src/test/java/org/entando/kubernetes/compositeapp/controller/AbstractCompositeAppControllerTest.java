@@ -23,8 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
-import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
@@ -47,9 +45,7 @@ import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
-import org.entando.kubernetes.model.externaldatabase.DoneableEntandoDatabaseService;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceOperationFactory;
 import org.entando.kubernetes.model.keycloakserver.DoneableEntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
@@ -197,48 +193,6 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
     protected String ensurePluginControllerVersion() throws JsonProcessingException {
         ImageVersionPreparation imageVersionPreparation = new ImageVersionPreparation(getKubernetesClient());
         return imageVersionPreparation.ensureImageVersion("entando-k8s-plugin-controller", "6.0.0");
-    }
-
-    @Test
-    void testExecuteControllerObject() {
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
-                getKubernetesClient().getNamespace());
-        EntandoCompositeApp app = new EntandoCompositeAppBuilder()
-                .withNewMetadata().withName(MY_APP).withNamespace(getKubernetesClient().getNamespace()).endMetadata()
-                .withNewSpec()
-                .addNewEntandoDatabaseService()
-                .withNewMetadata().withName("test-database").withNamespace(getKubernetesClient().getNamespace()).endMetadata()
-                .withNewSpec()
-                .withDbms(DbmsVendor.ORACLE)
-                .withHost("somedatabase.com")
-                .withPort(5050)
-                .withSecretName("oracle-secret")
-                .endSpec()
-                .endEntandoDatabaseService()
-                .endSpec()
-                .build();
-        performCreate(app);
-        FilterWatchListDeletable<Service, ServiceList, Boolean, Watch, Watcher<Service>> listable = getKubernetesClient()
-                .services()
-                .inNamespace(getKubernetesClient().getNamespace())
-                .withLabel("EntandoDatabaseService", app.getSpec().getComponents().get(0).getMetadata().getName());
-        await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> listable.list().getItems().size() > 0);
-        Service service = listable.list().getItems().get(0);
-        assertThat(service.getSpec().getExternalName(), is("somedatabase.com"));
-        Resource<EntandoDatabaseService, DoneableEntandoDatabaseService> entandoDatabaseServiceGettable =
-                EntandoDatabaseServiceOperationFactory
-                        .produceAllEntandoDatabaseServices(getKubernetesClient())
-                        .inNamespace(NAMESPACE)
-                        .withName("test-database");
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS)
-                .until(() -> entandoDatabaseServiceGettable.fromServer().get().getStatus().getEntandoDeploymentPhase()
-                        == EntandoDeploymentPhase.SUCCESSFUL);
-        Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable =
-                EntandoCompositeAppOperationFactory
-                        .produceAllEntandoCompositeApps(getKubernetesClient())
-                        .inNamespace(NAMESPACE)
-                        .withName(MY_APP);
-        await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> hasFinished(appGettable));
     }
 
 }

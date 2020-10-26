@@ -31,13 +31,11 @@ import org.entando.kubernetes.controller.EntandoControllerException;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.PodResult;
 import org.entando.kubernetes.controller.common.ControllerExecutor;
-import org.entando.kubernetes.controller.database.EntandoDatabaseServiceController;
 import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.WebServerStatus;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 
 public class EntandoCompositeAppController extends AbstractDbAwareController<EntandoCompositeApp> {
 
@@ -74,24 +72,20 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
             component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
             component.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.REQUESTED);
             EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().createOrPatchEntandoResource(component);
-            if (storedComponent instanceof EntandoDatabaseService) {
-                new EntandoDatabaseServiceController(k8sClient).processEvent(Action.ADDED, (EntandoDatabaseService) storedComponent);
-            } else {
-                Pod pod = executor.runControllerFor(
-                        Action.ADDED,
-                        storedComponent,
-                        executor.resolveLatestImageFor(storedComponent.getClass()).orElseThrow(IllegalStateException::new)
-                );
-                WebServerStatus webServerStatus = new WebServerStatus(storedComponent.getMetadata().getName());
-                webServerStatus.setPodStatus(pod.getStatus());
-                getClient().entandoResources().updateStatus(newCompositeApp, webServerStatus);
-                if (PodResult.of(pod).hasFailed()) {
-                    String message = format("Unexpected exception occurred while adding %s %s/%s", storedComponent.getKind(),
-                            storedComponent.getMetadata().getNamespace(),
-                            storedComponent.getMetadata().getName());
-                    this.logger.log(Level.SEVERE, message);
-                    throw new EntandoControllerException(message);
-                }
+            Pod pod = executor.runControllerFor(
+                    Action.ADDED,
+                    storedComponent,
+                    executor.resolveLatestImageFor(storedComponent.getClass()).orElseThrow(IllegalStateException::new)
+            );
+            WebServerStatus webServerStatus = new WebServerStatus(storedComponent.getMetadata().getName());
+            webServerStatus.setPodStatus(pod.getStatus());
+            getClient().entandoResources().updateStatus(newCompositeApp, webServerStatus);
+            if (PodResult.of(pod).hasFailed()) {
+                String message = format("Unexpected exception occurred while adding %s %s/%s", storedComponent.getKind(),
+                        storedComponent.getMetadata().getNamespace(),
+                        storedComponent.getMetadata().getName());
+                this.logger.log(Level.SEVERE, message);
+                throw new EntandoControllerException(message);
             }
         }
     }

@@ -18,10 +18,12 @@ package org.entando.kubernetes.compositeapp.controller;
 
 import static java.lang.String.format;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.quarkus.runtime.StartupEvent;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.logging.Level;
 import javax.enterprise.event.Observes;
@@ -36,6 +38,7 @@ import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.WebServerStatus;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
+import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 
 public class EntandoCompositeAppController extends AbstractDbAwareController<EntandoCompositeApp> {
 
@@ -63,13 +66,22 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void synchronizeDeploymentState(EntandoCompositeApp newCompositeApp) {
         ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient);
         for (EntandoBaseCustomResource component : newCompositeApp.getSpec().getComponents()) {
-            if (component.getMetadata().getNamespace() == null) {
-                component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
+            if (component instanceof EntandoCustomResourceReference) {
+                EntandoCustomResourceReference ref = (EntandoCustomResourceReference) component;
+                component = k8sClient.entandoResources().load(resolveType(ref.getSpec().getTargetKind()),
+                        ref.getSpec().getTargetNamespace().orElse(newCompositeApp.getMetadata().getNamespace()),
+                        ref.getSpec().getTargetName());
+
+            } else {
+                if (component.getMetadata().getNamespace() == null) {
+                    component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
+                }
+                component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
             }
-            component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
             component.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.REQUESTED);
             EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().createOrPatchEntandoResource(component);
             Pod pod = executor.runControllerFor(
@@ -88,6 +100,16 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
                 throw new EntandoControllerException(message);
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Class<? extends EntandoBaseCustomResource> resolveType(String kind) {
+        return (Class<? extends EntandoBaseCustomResource>) Arrays
+                .stream(EntandoBaseCustomResource.class.getAnnotation(JsonSubTypes.class).value())
+                .filter(type -> type.name().equals(kind))
+                .findAny()
+                .orElseThrow(IllegalArgumentException::new)
+                .value();
     }
 }
 

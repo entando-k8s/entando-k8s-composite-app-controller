@@ -51,6 +51,7 @@ import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
 import org.entando.kubernetes.model.plugin.DoneableEntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,8 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
 
     protected abstract EntandoCompositeApp performCreate(EntandoCompositeApp resource);
 
+    protected abstract EntandoPlugin performCreate(EntandoPlugin resource);
+
     @Test
     public void testExecuteControllerPod() throws JsonProcessingException {
         //Given I have a clean namespace
@@ -79,8 +82,23 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         //And I have a config map with the Entando KeycloakController's image information
         final String keycloakControllerVersionToExpect = ensureKeycloakControllerVersion();
         final String pluginControllerVersionToExpect = ensurePluginControllerVersion();
-        //When I create a new EntandoCompositeApp with an EntandoKeycloakServer and EntandoPlugin component
-
+        //When I create a new EntandoCompositeApp with an EntandoKeycloakServer and a ling to an EntandoPlugin
+        EntandoPlugin plugin = new EntandoPluginBuilder()
+                .withNewMetadata()
+                .withName(PLUGIN_NAME)
+                .withNamespace(client.getNamespace())
+                .endMetadata().withNewSpec()
+                .withImage("entando/entando-avatar-plugin")
+                .withDbms(DbmsVendor.POSTGRESQL)
+                .withReplicas(1)
+                .withIngressHostName(PLUGIN_NAME + "." + getDomainSuffix())
+                .withHealthCheckPath("/management/health")
+                .withIngressPath("/avatarPlugin")
+                .withSecurityLevel(PluginSecurityLevel.STRICT)
+                .endSpec()
+                .build();
+        plugin.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.IGNORED);
+        performCreate(plugin);
         EntandoCompositeApp appToCreate = new EntandoCompositeAppBuilder()
                 .withNewMetadata().withName(MY_APP).withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
@@ -92,17 +110,15 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .withIngressHostName(KEYCLOAK_NAME + "." + getDomainSuffix())
                 .endSpec()
                 .endEntandoKeycloakServer()
-                .addNewEntandoPlugin()
-                .withNewMetadata().withName(PLUGIN_NAME).endMetadata().withNewSpec()
-                .withImage("entando/entando-avatar-plugin")
-                .withDbms(DbmsVendor.POSTGRESQL)
-                .withReplicas(1)
-                .withIngressHostName(PLUGIN_NAME + "." + getDomainSuffix())
-                .withHealthCheckPath("/management/health")
-                .withIngressPath("/avatarPlugin")
-                .withSecurityLevel(PluginSecurityLevel.STRICT)
+                .addNewEntandoCustomResourceReference()
+                .withNewMetadata()
+                .withName("reference-to-" + PLUGIN_NAME)
+                .endMetadata()
+                .withNewSpec()
+                .withTargetKind("EntandoPlugin")
+                .withTargetName(PLUGIN_NAME)
                 .endSpec()
-                .endEntandoPlugin()
+                .endEntandoCustomResourceReference()
                 .endSpec()
                 .build();
         EntandoCompositeApp app = performCreate(appToCreate);
@@ -140,19 +156,19 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> pluginControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
-                .withLabel("EntandoPlugin", app.getSpec().getComponents().get(1).getMetadata().getName());
+                .withLabel("EntandoPlugin", PLUGIN_NAME);
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> pluginControllerList.list().getItems().size() > 0);
         Pod thePluginControllerPod = pluginControllerList.list().getItems().get(0);
-        //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
+        //and the EntandoPlugin resource has NOT been saved to K8S under the EntandoCompositeApp
         Resource<EntandoPlugin, DoneableEntandoPlugin> pluginGettable = EntandoPluginOperationFactory
                 .produceAllEntandoPlugins(getKubernetesClient()).inNamespace(NAMESPACE).withName(PLUGIN_NAME);
         await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
-                () -> pluginGettable.get().getMetadata().getOwnerReferences().get(0).getUid(), is(app.getMetadata().getUid())
+                () -> pluginGettable.get().getMetadata().getOwnerReferences().isEmpty()
         );
-        //and the EntandoKeycloakServer resource's identifying information has been passed to the controller Pod
+        //and the EntandoPlugin resource's identifying information has been passed to the controller Pod
         assertThat(theVariableNamed("ENTANDO_RESOURCE_ACTION").on(thePrimaryContainerOn(thePluginControllerPod)), is(Action.ADDED.name()));
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAME").on(thePrimaryContainerOn(thePluginControllerPod)),
-                is(app.getSpec().getComponents().get(1).getMetadata().getName()));
+                is(PLUGIN_NAME));
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(thePluginControllerPod)),
                 is(app.getMetadata().getNamespace()));
         //With the correct version specified

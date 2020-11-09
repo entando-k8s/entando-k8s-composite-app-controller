@@ -42,7 +42,7 @@ import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +57,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
 
     @Rule
     public KubernetesServer server = new KubernetesServer(false, true);
-    private Class<? extends EntandoBaseCustomResource> classToFail;
+    private String componentNameToFail;
     private EntandoCompositeAppController entandoCompositeAppController;
 
     @Override
@@ -85,9 +85,14 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         return created;
     }
 
+    @Override
+    protected EntandoPlugin performCreate(EntandoPlugin resource) {
+        return getClient().entandoResources().createOrPatchEntandoResource(resource);
+    }
+
     @BeforeEach
     void setUp() {
-        EntandoOperatorConfig.getOperatorConfigMapNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(),s));
+        EntandoOperatorConfig.getOperatorConfigMapNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(), s));
         clearNamespace();
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }
@@ -95,7 +100,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     @Test
     void testFailure() throws JsonProcessingException {
         //Given that EntandoPlugin deployments will fail
-        this.classToFail = EntandoPlugin.class;
+        this.componentNameToFail = "reference-to-" + PLUGIN_NAME;
         //When I deploy the EntandoCompositeApp
         super.testExecuteControllerPod();
         //Its overall status is reflected as failed
@@ -131,17 +136,22 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         PodClientDouble.setEmulatePodWatching(true);
         new Thread(() -> {
             for (EntandoBaseCustomResource resource : components) {
-                if (!(resource instanceof EntandoDatabaseService)) {
-                    AtomicReference<PodWatcher> podWatcherHolder = getClient().pods().getPodWatcherHolder();
-                    await().atMost(30, TimeUnit.SECONDS).until(() -> podWatcherHolder.get() != null);
-                    Pod pod = this.getClient().pods()
-                            .loadPod(getKubernetesClient().getNamespace(), resource.getKind(), resource.getMetadata().getName());
-                    if (classToFail == resource.getClass()) {
-                        pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
-                        podWatcherHolder.getAndSet(null).eventReceived(Action.MODIFIED, pod);
-                    } else {
-                        podWatcherHolder.getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
-                    }
+                AtomicReference<PodWatcher> podWatcherHolder = getClient().pods().getPodWatcherHolder();
+                await().atMost(30, TimeUnit.SECONDS).until(() -> podWatcherHolder.get() != null);
+                String kind = resource.getKind();
+                String name = resource.getMetadata().getName();
+                if (resource instanceof EntandoCustomResourceReference) {
+                    EntandoCustomResourceReference ref = (EntandoCustomResourceReference) resource;
+                    kind = ref.getSpec().getTargetKind();
+                    name = ref.getSpec().getTargetName();
+                }
+                Pod pod = this.getClient().pods()
+                        .loadPod(getKubernetesClient().getNamespace(), kind, name);
+                if (resource.getMetadata().getName().equals(componentNameToFail)) {
+                    pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
+                    podWatcherHolder.getAndSet(null).eventReceived(Action.MODIFIED, pod);
+                } else {
+                    podWatcherHolder.getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
                 }
             }
         }).start();

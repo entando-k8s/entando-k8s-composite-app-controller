@@ -25,6 +25,8 @@ import org.entando.kubernetes.controller.integrationtest.support.EntandoOperator
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -67,6 +69,13 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
     @Override
     protected EntandoCompositeApp performCreate(EntandoCompositeApp resource) {
         return EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
+                .inNamespace(NAMESPACE)
+                .create(resource);
+    }
+
+    @Override
+    protected EntandoPlugin performCreate(EntandoPlugin resource) {
+        return EntandoPluginOperationFactory.produceAllEntandoPlugins(getKubernetesClient())
                 .inNamespace(NAMESPACE)
                 .create(resource);
     }

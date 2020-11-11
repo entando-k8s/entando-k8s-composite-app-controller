@@ -80,9 +80,11 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
                 if (component.getMetadata().getNamespace() == null) {
                     component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
                 }
-                component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
+                //TODO relax buildOwnerReference
+                component.getMetadata().setOwnerReferences(
+                        Collections.singletonList(KubeUtils.buildOwnerReference((EntandoBaseCustomResource) newCompositeApp)));
             }
-            component.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.REQUESTED);
+            component.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.STARTED);
             EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().createOrPatchEntandoResource(component);
             Pod pod = executor.runControllerFor(
                     Action.ADDED,

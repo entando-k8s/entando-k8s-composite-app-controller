@@ -136,8 +136,10 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         PodClientDouble.setEmulatePodWatching(true);
         new Thread(() -> {
             for (EntandoBaseCustomResource resource : components) {
-                AtomicReference<PodWatcher> podWatcherHolder = getClient().pods().getPodWatcherHolder();
-                await().atMost(30, TimeUnit.SECONDS).until(() -> podWatcherHolder.get() != null);
+                //Wait for deletion which will complete without an even as there would be no existing pods to delete
+                await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().getAndSet(null) != null);
+                //Now wait for deployer pod which needs specific behaviour to emulate
+                await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().get() != null);
                 String kind = resource.getKind();
                 String name = resource.getMetadata().getName();
                 if (resource instanceof EntandoCustomResourceReference) {
@@ -145,13 +147,12 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                     kind = ref.getSpec().getTargetKind();
                     name = ref.getSpec().getTargetName();
                 }
-                Pod pod = this.getClient().pods()
-                        .loadPod(getKubernetesClient().getNamespace(), kind, name);
+                Pod pod = this.getClient().pods().loadPod(getKubernetesClient().getNamespace(), kind, name);
                 if (resource.getMetadata().getName().equals(componentNameToFail)) {
                     pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
-                    podWatcherHolder.getAndSet(null).eventReceived(Action.MODIFIED, pod);
+                    getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, pod);
                 } else {
-                    podWatcherHolder.getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
+                    getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
                 }
             }
         }).start();

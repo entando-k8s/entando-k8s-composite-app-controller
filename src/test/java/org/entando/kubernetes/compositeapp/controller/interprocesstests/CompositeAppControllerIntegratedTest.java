@@ -50,6 +50,7 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
     public void cleanup() {
         this.client = (DefaultKubernetesClient) TestFixturePreparation.newClient().inNamespace(NAMESPACE);
         this.myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS.getJvmSystemProperty(), "redhat-registry");
         clearNamespace();
         registerListeners();
     }

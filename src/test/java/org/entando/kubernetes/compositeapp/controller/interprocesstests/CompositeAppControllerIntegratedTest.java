@@ -18,10 +18,8 @@ package org.entando.kubernetes.compositeapp.controller.interprocesstests;
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import java.util.Locale;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
-import org.entando.kubernetes.controller.EntandoOperatorComplianceMode;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
@@ -48,9 +46,9 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
 
     @BeforeEach
     public void cleanup() {
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS.getJvmSystemProperty(), "redhat-registry");
         this.client = (DefaultKubernetesClient) TestFixturePreparation.newClient().inNamespace(NAMESPACE);
         this.myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS.getJvmSystemProperty(), "redhat-registry");
         clearNamespace();
         registerListeners();
     }

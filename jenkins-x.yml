@@ -25,6 +25,11 @@ pipelineConfig:
       value: entando/entando-k8s-cluster-infrastructure-controller@sha256:f6833a394b70b2a0139b39f2edc7c72dabaac29891e12b10a99c799d7db32922
     - name: RELATED_IMAGE_ENTANDO_K8S_SERVICE
       value: entando/entando-k8s-service@sha256:f0280ee845571eac1f5b673a67ba757b87e5eac7ca743daab7f3e4f1ac54a1b6
+    - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS
+      valueFrom:
+        secretKeyRef:
+          key: redhat.registry.credentials
+          name: entando-jx-common-secret
     - name: EXECUTABLE_TYPE
       valueFrom:
         secretKeyRef:

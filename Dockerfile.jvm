@@ -1,6 +1,6 @@
 FROM fabric8/java-ubi-openjdk11-jdk
 ARG VERSION
-LABEL name="Entando K8S Keycloak Controller" \
+LABEL name="Entando K8S Composite App Controller" \
       vendor="Entando" \
       version="v${VERSION}" \
       release="6" \
@@ -11,7 +11,7 @@ LABEL name="Entando K8S Keycloak Controller" \
                   deployment resources"
 ENV JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
-COPY LICENSE /licences/entandol-lgpl.txt
+COPY target/generated-resources/licenses /licenses
 COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 ENTRYPOINT [ "/deployments/run-java.sh" ]

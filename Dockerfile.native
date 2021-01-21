@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 ARG VERSION
-LABEL name="Entando K8S Keycloak Controller" \
+LABEL name="Entando K8S Composite App Controller" \
       vendor="Entando" \
       version="v${VERSION}" \
       release="6" \
@@ -9,6 +9,7 @@ LABEL name="Entando K8S Keycloak Controller" \
                   EntandoCompositeApp  to your cluster. \
                   Subsequent executions of this container against the same EntandoCompositeApp will patch the existing \
                   deployment resources"
+COPY target/generated-resources/licenses /licenses
 COPY target/*-runner /work/application
 RUN chmod 775 /work/application
 CMD ["./application","-Djava.library.path=/work/lib"]

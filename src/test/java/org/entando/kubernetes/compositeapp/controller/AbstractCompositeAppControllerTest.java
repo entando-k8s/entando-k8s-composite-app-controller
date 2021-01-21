@@ -17,8 +17,8 @@
 package org.entando.kubernetes.compositeapp.controller;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -29,10 +29,14 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.Resource;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.client.DefaultIngressClient;
+import org.entando.kubernetes.controller.EntandoOperatorComplianceMode;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.controller.creators.IngressCreator;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
@@ -54,7 +58,8 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 @SuppressWarnings("java:S5786")//because it is actually used in subclasses in different packages
 public abstract class AbstractCompositeAppControllerTest implements FluentIntegrationTesting, FluentTraversals,
@@ -72,12 +77,15 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
 
     protected abstract EntandoPlugin performCreate(EntandoPlugin resource);
 
-    @Test
-    public void testExecuteControllerPod() throws JsonProcessingException {
+    @ParameterizedTest
+    @EnumSource(value = EntandoOperatorComplianceMode.class, names = {"COMMUNITY", "REDHAT"})
+    public void testExecuteControllerPod(EntandoOperatorComplianceMode mode) throws JsonProcessingException {
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty(),
+                mode.name().toLowerCase(Locale.ROOT));
         //Given I have a clean namespace
         KubernetesClient client = getKubernetesClient();
         //and the Coordinator observes this namespace
-        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_NAMESPACE_TO_OBSERVE.getJvmSystemProperty(),
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_NAMESPACES_TO_OBSERVE.getJvmSystemProperty(),
                 client.getNamespace());
         //And I have a config map with the Entando KeycloakController's image information
         final String keycloakControllerVersionToExpect = ensureKeycloakControllerVersion();
@@ -97,7 +105,10 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .withSecurityLevel(PluginSecurityLevel.STRICT)
                 .endSpec()
                 .build();
-        plugin.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.IGNORED);
+        plugin.getMetadata().setAnnotations(new HashMap<>());
+        plugin.getMetadata().getAnnotations()
+                .put(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME,
+                        OperatorProcessingInstruction.DEFER.name().toLowerCase(Locale.ROOT));
         performCreate(plugin);
         EntandoCompositeApp appToCreate = new EntandoCompositeAppBuilder()
                 .withNewMetadata().withName(MY_APP).withNamespace(client.getNamespace()).endMetadata()
@@ -127,11 +138,13 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
+        System.out.println("@@@@@@@@@@@");
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
         Resource<EntandoKeycloakServer, DoneableEntandoKeycloakServer> keycloakGettable = EntandoKeycloakServerOperationFactory
                 .produceAllEntandoKeycloakServers(getKubernetesClient()).inNamespace(NAMESPACE).withName(KEYCLOAK_NAME);
+        System.out.println("#####################");
         await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
                 () -> keycloakGettable.get().getMetadata().getOwnerReferences().get(0).getUid().equals(app.getMetadata().getUid())
         );
@@ -142,8 +155,8 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 is(app.getSpec().getComponents().get(0).getMetadata().getName()));
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(theKeycloakControllerPod)),
                 is(app.getMetadata().getNamespace()));
-        //With the correct version of the controller image specified
-        assertTrue(thePrimaryContainerOn(theKeycloakControllerPod).getImage().endsWith(keycloakControllerVersionToExpect));
+        //With the correct controller image specified
+        assertThat(thePrimaryContainerOn(theKeycloakControllerPod).getImage(), containsString("entando/entando-k8s-keycloak-controller"));
         //And its status reflecting on the EntandoCompositeApp
         Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable =
                 EntandoCompositeAppOperationFactory
@@ -171,8 +184,8 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 is(PLUGIN_NAME));
         assertThat(theVariableNamed("ENTANDO_RESOURCE_NAMESPACE").on(thePrimaryContainerOn(thePluginControllerPod)),
                 is(app.getMetadata().getNamespace()));
-        //With the correct version specified
-        assertTrue(thePrimaryContainerOn(thePluginControllerPod).getImage().endsWith(pluginControllerVersionToExpect));
+        //With the entando plugin controller image specified
+        assertThat(thePrimaryContainerOn(thePluginControllerPod).getImage(), containsString("entando/entando-k8s-plugin-controller"));
         //And its status reflecting on the EntandoCompositeApp
         await().ignoreExceptions().atMost(180, TimeUnit.SECONDS).until(
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(PLUGIN_NAME).get().getPodStatus() != null

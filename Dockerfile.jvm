@@ -1,6 +1,17 @@
-FROM fabric8/java-alpine-openjdk8-jre
-ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+FROM fabric8/java-ubi-openjdk11-jdk
+ARG VERSION
+LABEL name="Entando K8S Keycloak Controller" \
+      vendor="Entando" \
+      version="v${VERSION}" \
+      release="6" \
+      summary="This container processes EntandoCompositeApp custom resources." \
+      description="This is a run-to-completion container. It will deploy all the components defined in the  \
+                  EntandoCompositeApp  to your cluster. \
+                  Subsequent executions of this container against the same EntandoCompositeApp will patch the existing \
+                  deployment resources"
+ENV JAVA_OPTIONS="-Djava.util.logging.manager=org.jboss.logmanager.LogManager"
 ENV AB_ENABLED=jmx_exporter
+COPY LICENSE /licences/entandol-lgpl.txt
 COPY target/lib/* /deployments/lib/
 COPY target/*-runner.jar /deployments/app.jar
 ENTRYPOINT [ "/deployments/run-java.sh" ]

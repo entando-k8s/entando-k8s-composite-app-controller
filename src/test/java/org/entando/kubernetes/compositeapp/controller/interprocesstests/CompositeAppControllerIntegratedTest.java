@@ -18,8 +18,11 @@ package org.entando.kubernetes.compositeapp.controller.interprocesstests;
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import java.util.Locale;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
+import org.entando.kubernetes.controller.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
@@ -64,6 +67,7 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
     public void stopListening() {
         myHelper.afterTest();
         client.close();
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty());
     }
 
     @Override

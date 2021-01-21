@@ -26,13 +26,13 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
+import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.client.PodWatcher;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
+import org.entando.kubernetes.controller.EntandoOperatorComplianceMode;
 import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.PodClientDouble;
@@ -102,7 +102,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         //Given that EntandoPlugin deployments will fail
         this.componentNameToFail = "reference-to-" + PLUGIN_NAME;
         //When I deploy the EntandoCompositeApp
-        super.testExecuteControllerPod();
+        super.testExecuteControllerPod(EntandoOperatorComplianceMode.COMMUNITY);
         //Its overall status is reflected as failed
         assertThat(
                 getClient().entandoResources().load(EntandoCompositeApp.class, NAMESPACE, MY_APP).getStatus().getEntandoDeploymentPhase(),
@@ -132,10 +132,10 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                 .inNamespace(getKubernetesClient().getNamespace()).create(resource);
     }
 
-    protected void emulatePodBehavior(List<EntandoBaseCustomResource> components) {
+    protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable>> components) {
         PodClientDouble.setEmulatePodWatching(true);
         new Thread(() -> {
-            for (EntandoBaseCustomResource resource : components) {
+            for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
                 //Wait for deletion which will complete without an even as there would be no existing pods to delete
                 await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().getAndSet(null) != null);
                 //Now wait for deployer pod which needs specific behaviour to emulate

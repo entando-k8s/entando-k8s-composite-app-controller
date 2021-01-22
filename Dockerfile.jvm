@@ -1,4 +1,4 @@
-FROM fabric8/java-ubi-openjdk11-jdk
+FROM entando/entando-ubi8-java11-base:6.3.0
 ARG VERSION
 LABEL name="Entando K8S Composite App Controller" \
       vendor="Entando" \

@@ -15,16 +15,18 @@ pipelineConfig:
       value: registry.redhat.io/rhel8/postgresql-12@sha256:c6b6da4f762c2f68bfe558efe954739438ffa2e9aae1c617b50011fb0eed8347
     - name: RELATED_IMAGE_ENTANDO_K8S_DBJOB
       value: entando/entando-k8s-dbjob@sha256:660d3af5b44fb3d443b36f58515b880210517fa4e3061925a41c46ea552d61d2
-    - name: RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER
-      value: entando/entando-k8s-keycloak-controller@sha256:4e2df5760ef77e2b6838beb1b23c0f0448b3e1a79a68fd17269172fb8241c75e
     - name: RELATED_IMAGE_ENTANDO_REDHAT_SSO
       value: entando/entando-redhat-sso@sha256:a67ca13039479dbc13cd68380e4e33fa316397df20e96375c9b77e6022bd442e
-    - name: RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER
-      value: entando/entando-k8s-plugin-controller@sha256:2c7054c49bdfeefcd05e39fc56cd970beca9d30caa854c25e6a5bcf0b5086b2f
-    - name: RELATED_IMAGE_CLUSTER_INFRASTRUCTURE_CONTROLLER
-      value: entando/entando-k8s-cluster-infrastructure-controller@sha256:f6833a394b70b2a0139b39f2edc7c72dabaac29891e12b10a99c799d7db32922
     - name: RELATED_IMAGE_ENTANDO_K8S_SERVICE
       value: entando/entando-k8s-service@sha256:f0280ee845571eac1f5b673a67ba757b87e5eac7ca743daab7f3e4f1ac54a1b6
+    - name: RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER
+      value: entando/entando-k8s-keycloak-controller@sha256:07843886c04d14f7ab032737ac78da518e263eef802e0e0d4e354bf1919238d3
+    - name: RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER
+      value: entando/entando-k8s-plugin-controller@sha256:2ce521a8f56fa317264e4581dfdf9d5d19fd3c3fccd047a9d96c7f1c87e59c96
+    - name: RELATED_IMAGE_CLUSTER_INFRASTRUCTURE_CONTROLLER
+      value: entando/entando-k8s-cluster-infrastructure-controller@sha256:8601035b356a46bd48baf0f61f5c3c92a64ad570e945ad3b65d6c3cd286021d6
+    - name: RELATED_IMAGE_ENTANDO_K8S_COMPOSITE_APP_CONTROLLER
+      value: entando/entando-k8s-composite-app-controller@sha256:5f004ac05669cb611a6e1275dc4362af4d08cddf7cb059fcea3e63b33b93f867
     - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS
       valueFrom:
         secretKeyRef:

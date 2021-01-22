@@ -64,7 +64,7 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-53-34</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>0.0.0-SNAPSHOT-PR-53-36</entando-k8s-operator-common.version>
         <entando-k8s-custom-model.version>0.0.0-SNAPSHOT-PR-37-5</entando-k8s-custom-model.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>post-deployment</postDeploymentTestGroups>

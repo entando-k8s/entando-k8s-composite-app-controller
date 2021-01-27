@@ -20,13 +20,13 @@ pipelineConfig:
     - name: RELATED_IMAGE_ENTANDO_K8S_SERVICE
       value: entando/entando-k8s-service@sha256:f0280ee845571eac1f5b673a67ba757b87e5eac7ca743daab7f3e4f1ac54a1b6
     - name: RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER
-      value: entando/entando-k8s-keycloak-controller@sha256:07843886c04d14f7ab032737ac78da518e263eef802e0e0d4e354bf1919238d3
+      value: entando/entando-k8s-keycloak-controller@sha256:d96d50d9e7abb84b3f4b1e8c007553a7d7abd17ef1d7d78b5c939da57d537100
     - name: RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER
-      value: entando/entando-k8s-plugin-controller@sha256:2ce521a8f56fa317264e4581dfdf9d5d19fd3c3fccd047a9d96c7f1c87e59c96
+      value: entando/entando-k8s-plugin-controller@sha256:56261256b117efe755e1088b14ee157d491daa84acf060597aef27859027d648
     - name: RELATED_IMAGE_CLUSTER_INFRASTRUCTURE_CONTROLLER
-      value: entando/entando-k8s-cluster-infrastructure-controller@sha256:8601035b356a46bd48baf0f61f5c3c92a64ad570e945ad3b65d6c3cd286021d6
+      value: entando/entando-k8s-cluster-infrastructure-controller@sha256:e35a40e92d8d50350fec3266f1b397a6aa020087530baaa4c907d9f9fd7d5169
     - name: RELATED_IMAGE_ENTANDO_K8S_COMPOSITE_APP_CONTROLLER
-      value: entando/entando-k8s-composite-app-controller@sha256:5f004ac05669cb611a6e1275dc4362af4d08cddf7cb059fcea3e63b33b93f867
+      value: entando/entando-k8s-composite-app-controller@sha256:f5cb61d046ace2d25baa100f0a0f19ef3a980f7f67202478da091547f4848618
     - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS
       valueFrom:
         secretKeyRef:

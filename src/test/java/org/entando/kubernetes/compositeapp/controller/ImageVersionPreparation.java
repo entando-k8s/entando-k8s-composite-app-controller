@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.Map;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 
 public class ImageVersionPreparation {
 

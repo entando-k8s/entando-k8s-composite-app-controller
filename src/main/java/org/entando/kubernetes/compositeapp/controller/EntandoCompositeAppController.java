@@ -29,13 +29,15 @@ import java.util.Collections;
 import java.util.logging.Level;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import org.entando.kubernetes.controller.AbstractDbAwareController;
-import org.entando.kubernetes.controller.EntandoControllerException;
-import org.entando.kubernetes.controller.KubeUtils;
-import org.entando.kubernetes.controller.PodResult;
-import org.entando.kubernetes.controller.common.ControllerExecutor;
-import org.entando.kubernetes.controller.common.OperatorProcessingInstruction;
-import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
+import org.entando.kubernetes.controller.spi.common.PodResult;
+import org.entando.kubernetes.controller.spi.common.ResourceUtils;
+import org.entando.kubernetes.controller.support.client.EntandoResourceClient;
+import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
+import org.entando.kubernetes.controller.support.controller.AbstractDbAwareController;
+import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
+import org.entando.kubernetes.controller.support.controller.EntandoControllerException;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.WebServerStatus;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
@@ -60,8 +62,10 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
         this.namespace = kubernetesClient.getNamespace();
     }
 
-    public SimpleK8SClient<?> getClient() {
-        return super.k8sClient;
+    //We know this won't ever break.
+    @SuppressWarnings("unchecked")
+    public SimpleK8SClient<EntandoResourceClient> getClient() {
+        return (SimpleK8SClient<EntandoResourceClient>) super.k8sClient;
     }
 
     public void onStartup(@Observes StartupEvent event) {
@@ -108,7 +112,7 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
             component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
         }
         component.getMetadata().setOwnerReferences(
-                Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));
+                Collections.singletonList(ResourceUtils.buildOwnerReference(newCompositeApp)));
         component = k8sClient.entandoResources().createOrPatchEntandoResource(component);
         return component;
     }

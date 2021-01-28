@@ -28,6 +28,8 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
@@ -59,6 +61,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     public KubernetesServer server = new KubernetesServer(false, true);
     private String componentNameToFail;
     private EntandoCompositeAppController entandoCompositeAppController;
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Override
     public synchronized SimpleK8SClient<?> getClient() {
@@ -93,7 +96,6 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     @BeforeEach
     void setUp() {
         EntandoOperatorConfig.getOperatorConfigMapNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(), s));
-        clearNamespace();
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }
 
@@ -134,7 +136,8 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
 
     protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable>> components) {
         PodClientDouble.setEmulatePodWatching(true);
-        new Thread(() -> {
+        //delay pod behavior to give the controller a chance to get to the point where it wats for the pod status
+        scheduler.schedule(() -> {
             for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
                 //Wait for deletion which will complete without an even as there would be no existing pods to delete
                 await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().getAndSet(null) != null);
@@ -155,7 +158,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                     getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
                 }
             }
-        }).start();
+        },300, TimeUnit.MILLISECONDS);
 
     }
 

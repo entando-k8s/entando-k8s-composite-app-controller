@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import org.entando.kubernetes.client.DefaultIngressClient;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.FluentIntegrationTesting;
-import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
@@ -49,7 +48,6 @@ import org.entando.kubernetes.model.compositeapp.DoneableEntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
-import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.keycloakserver.DoneableEntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServerOperationFactory;
@@ -114,7 +112,8 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .withNewMetadata().withName(MY_APP).withNamespace(client.getNamespace()).endMetadata()
                 .withNewSpec()
                 .addNewEntandoKeycloakServer()
-                .withNewMetadata().withName(KEYCLOAK_NAME).withNamespace(client.getNamespace()).endMetadata()
+                .withNewMetadata().withName(KEYCLOAK_NAME)
+                .endMetadata()
                 .withNewSpec()
                 .withDefault(true)
                 .withDbms(DbmsVendor.NONE)
@@ -132,7 +131,9 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .endEntandoCustomResourceReference()
                 .endSpec()
                 .build();
+        System.out.println("#####################");
         EntandoCompositeApp app = performCreate(appToCreate);
+        System.out.println("!!!!!!!!!!!!!!!!!!!!!!");
         //Then I expect to see the keycloak controller pod
         FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
@@ -144,7 +145,6 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp
         Resource<EntandoKeycloakServer, DoneableEntandoKeycloakServer> keycloakGettable = EntandoKeycloakServerOperationFactory
                 .produceAllEntandoKeycloakServers(getKubernetesClient()).inNamespace(NAMESPACE).withName(KEYCLOAK_NAME);
-        System.out.println("#####################");
         await().ignoreExceptions().atMost(15, TimeUnit.SECONDS).until(
                 () -> keycloakGettable.get().getMetadata().getOwnerReferences().get(0).getUid().equals(app.getMetadata().getUid())
         );
@@ -194,13 +194,6 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
         await().ignoreExceptions().atMost(30, TimeUnit.SECONDS).until(() -> hasFinished(appGettable));
     }
 
-    protected void clearNamespace() {
-        TestFixturePreparation.prepareTestFixture(getKubernetesClient(),
-                deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
-                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
-    }
 
     private boolean hasFinished(Resource<EntandoCompositeApp, DoneableEntandoCompositeApp> appGettable) {
         EntandoDeploymentPhase phase = appGettable.fromServer().get().getStatus().getEntandoDeploymentPhase();

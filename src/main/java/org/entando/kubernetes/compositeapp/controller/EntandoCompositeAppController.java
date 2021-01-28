@@ -19,6 +19,7 @@ package org.entando.kubernetes.compositeapp.controller;
 import static java.lang.String.format;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
+import io.fabric8.kubernetes.api.builder.Builder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
@@ -39,9 +40,13 @@ import org.entando.kubernetes.controller.support.controller.AbstractDbAwareContr
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
 import org.entando.kubernetes.controller.support.controller.EntandoControllerException;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoBaseFluent;
+import org.entando.kubernetes.model.EntandoIngressingDeploymentBaseFluent;
+import org.entando.kubernetes.model.NestedIngressingDeploymentSpecFluent;
 import org.entando.kubernetes.model.WebServerStatus;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppSpec;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppSpecFluent;
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.jetbrains.annotations.NotNull;
 
@@ -106,15 +111,25 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
         return pod;
     }
 
-    private EntandoBaseCustomResource<?> prepareComponent(EntandoCompositeApp newCompositeApp,
-            EntandoBaseCustomResource<?> component) {
+    @SuppressWarnings("unchecked")
+    private <S extends Serializable, C extends EntandoBaseCustomResource<S>> C prepareComponent(EntandoCompositeApp newCompositeApp,
+            C component) {
+        EntandoBaseFluent<?> componentBuilder = EntandoCompositeAppSpecFluent.newBuilderFrom(component);
         if (component.getMetadata().getNamespace() == null) {
-            component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());
+            componentBuilder = componentBuilder.editMetadata().withNamespace(newCompositeApp.getMetadata().getNamespace()).endMetadata();
         }
-        component.getMetadata().setOwnerReferences(
-                Collections.singletonList(ResourceUtils.buildOwnerReference(newCompositeApp)));
-        component = k8sClient.entandoResources().createOrPatchEntandoResource(component);
-        return component;
+        if (componentBuilder instanceof EntandoIngressingDeploymentBaseFluent) {
+            NestedIngressingDeploymentSpecFluent<?, ?> eidsbf = ((EntandoIngressingDeploymentBaseFluent<?, ?>) componentBuilder).editSpec();
+            newCompositeApp.getSpec().getDbmsOverride().ifPresent(eidsbf::withDbms);
+            newCompositeApp.getSpec().getIngressHostNameOverride().ifPresent(eidsbf::withIngressHostName);
+            newCompositeApp.getSpec().getTlsSecretNameOverride().ifPresent(eidsbf::withTlsSecretName);
+            componentBuilder = eidsbf.endSpec();
+        }
+        componentBuilder = componentBuilder.editMetadata()
+                .withOwnerReferences(Collections.singletonList(ResourceUtils.buildOwnerReference(newCompositeApp)))
+                .endMetadata();
+        component = ((Builder<C>) componentBuilder).build();
+        return k8sClient.entandoResources().createOrPatchEntandoResource(component);
     }
 
     private <S extends Serializable, T extends EntandoBaseCustomResource<S>> T prepareReference(EntandoCompositeApp newCompositeApp,

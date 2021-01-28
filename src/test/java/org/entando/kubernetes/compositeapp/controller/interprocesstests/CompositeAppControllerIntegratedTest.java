@@ -26,6 +26,8 @@ import org.entando.kubernetes.controller.integrationtest.support.TestFixturePrep
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -81,6 +83,14 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
         return EntandoPluginOperationFactory.produceAllEntandoPlugins(getKubernetesClient())
                 .inNamespace(NAMESPACE)
                 .create(resource);
+    }
+
+    protected void clearNamespace() {
+        TestFixturePreparation.prepareTestFixture(getKubernetesClient(),
+                deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
     }
 
 }

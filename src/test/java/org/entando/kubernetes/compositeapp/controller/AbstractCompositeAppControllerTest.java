@@ -131,15 +131,12 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .endEntandoCustomResourceReference()
                 .endSpec()
                 .build();
-        System.out.println("#####################");
         EntandoCompositeApp app = performCreate(appToCreate);
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!");
         //Then I expect to see the keycloak controller pod
         FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
-        System.out.println("@@@@@@@@@@@");
         await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() > 0);
         Pod theKeycloakControllerPod = keycloakControllerList.list().getItems().get(0);
         //and the EntandoKeycloakServer resource has been saved to K8S under the EntandoCompositeApp

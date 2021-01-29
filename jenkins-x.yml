@@ -22,7 +22,7 @@ pipelineConfig:
     - name: RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER
       value: entando/entando-k8s-keycloak-controller@sha256:d96d50d9e7abb84b3f4b1e8c007553a7d7abd17ef1d7d78b5c939da57d537100
     - name: RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER
-      value: entando/entando-k8s-plugin-controller@sha256:56261256b117efe755e1088b14ee157d491daa84acf060597aef27859027d648
+      value: entando/entando-k8s-plugin-controller@sha256:9f03b459dd893035f0c131890fe3570b0802b0451772a19e5e954e8f42749d5c
     - name: RELATED_IMAGE_CLUSTER_INFRASTRUCTURE_CONTROLLER
       value: entando/entando-k8s-cluster-infrastructure-controller@sha256:e35a40e92d8d50350fec3266f1b397a6aa020087530baaa4c907d9f9fd7d5169
     - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS

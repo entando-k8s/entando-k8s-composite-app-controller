@@ -28,10 +28,13 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.entando.kubernetes.client.PodWatcher;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
 import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.PodClientDouble;
@@ -47,6 +50,7 @@ import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFac
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
@@ -61,7 +65,13 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     public KubernetesServer server = new KubernetesServer(false, true);
     private String componentNameToFail;
     private EntandoCompositeAppController entandoCompositeAppController;
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
+    private final BlockingQueue<PodWatcher> queue = new ArrayBlockingQueue<>(5);
+
+    @AfterEach
+    void shutdown() {
+        scheduler.shutdownNow();
+    }
 
     @Override
     public synchronized SimpleK8SClient<?> getClient() {
@@ -136,29 +146,42 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
 
     protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable>> components) {
         PodClientDouble.setEmulatePodWatching(true);
-        //delay pod behavior to give the controller a chance to get to the point where it wats for the pod status
-        scheduler.schedule(() -> {
-            for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
-                //Wait for deletion which will complete without an even as there would be no existing pods to delete
-                await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().getAndSet(null) != null);
-                //Now wait for deployer pod which needs specific behaviour to emulate
-                await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().get() != null);
-                String kind = resource.getKind();
-                String name = resource.getMetadata().getName();
-                if (resource instanceof EntandoCustomResourceReference) {
-                    EntandoCustomResourceReference ref = (EntandoCustomResourceReference) resource;
-                    kind = ref.getSpec().getTargetKind();
-                    name = ref.getSpec().getTargetName();
-                }
-                Pod pod = this.getClient().pods().loadPod(getKubernetesClient().getNamespace(), kind, name);
-                if (resource.getMetadata().getName().equals(componentNameToFail)) {
-                    pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
-                    getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, pod);
-                } else {
-                    getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
-                }
+        scheduler.scheduleAtFixedRate(() -> {
+            //whenever we find a podWatcher, we offer it to the queue in the correct sequence
+            //TODO move this logic to PodWaitingClient
+            PodWatcher podWatcher = this.getClient().pods().getPodWatcherHolder().getAndSet(null);
+            if (podWatcher != null) {
+                queue.offer(podWatcher);
             }
-        },300, TimeUnit.MILLISECONDS);
+        }, 0, 10, TimeUnit.MILLISECONDS);
+        scheduler.schedule(() -> {
+            try {
+                //Now we take the podWatchers from the queue in the correct sequence.
+                for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
+                    System.out.println("1  waiting for " + resource.getKind() + ":" + resource.getMetadata().getName());
+                    final PodWatcher deletionWatcher = queue.take();
+                    System.out.println("2  waiting for " + resource.getKind() + ":" + resource.getMetadata().getName());
+                    final PodWatcher podWatcher = queue.take();
+                    System.out.println("3  waiting for " + resource.getKind() + ":" + resource.getMetadata().getName());
+                    String kind = resource.getKind();
+                    String name = resource.getMetadata().getName();
+                    if (resource instanceof EntandoCustomResourceReference) {
+                        EntandoCustomResourceReference ref = (EntandoCustomResourceReference) resource;
+                        kind = ref.getSpec().getTargetKind();
+                        name = ref.getSpec().getTargetName();
+                    }
+                    Pod pod = this.getClient().pods().loadPod(getKubernetesClient().getNamespace(), kind, name);
+                    if (resource.getMetadata().getName().equals(componentNameToFail)) {
+                        pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
+                        podWatcher.eventReceived(Action.MODIFIED, pod);
+                    } else {
+                        podWatcher.eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, 100, TimeUnit.MILLISECONDS);
 
     }
 

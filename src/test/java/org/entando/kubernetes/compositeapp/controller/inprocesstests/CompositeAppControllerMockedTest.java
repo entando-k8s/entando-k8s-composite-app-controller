@@ -28,8 +28,6 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -37,8 +35,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.client.PodWatcher;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.PodClientDouble;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.support.client.PodWaitingClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
@@ -65,11 +63,12 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     public KubernetesServer server = new KubernetesServer(false, true);
     private String componentNameToFail;
     private EntandoCompositeAppController entandoCompositeAppController;
-    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
-    private final BlockingQueue<PodWatcher> queue = new ArrayBlockingQueue<>(5);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
 
     @AfterEach
     void shutdown() {
+        PodWaitingClient.ENQUEUE_POD_WATCH_HOLDERS.set(false);
+        getClient().pods().getPodWatcherQueue().clear();
         scheduler.shutdownNow();
     }
 
@@ -145,24 +144,15 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     }
 
     protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable>> components) {
-        PodClientDouble.setEmulatePodWatching(true);
-        scheduler.scheduleAtFixedRate(() -> {
-            //whenever we find a podWatcher, we offer it to the queue in the correct sequence
-            //TODO move this logic to PodWaitingClient
-            PodWatcher podWatcher = this.getClient().pods().getPodWatcherHolder().getAndSet(null);
-            if (podWatcher != null) {
-                queue.offer(podWatcher);
-            }
-        }, 0, 10, TimeUnit.MILLISECONDS);
+        PodWaitingClient.ENQUEUE_POD_WATCH_HOLDERS.set(true);
         scheduler.schedule(() -> {
             try {
                 //Now we take the podWatchers from the queue in the correct sequence.
                 for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
-                    System.out.println("1  waiting for " + resource.getKind() + ":" + resource.getMetadata().getName());
-                    final PodWatcher deletionWatcher = queue.take();
-                    System.out.println("2  waiting for " + resource.getKind() + ":" + resource.getMetadata().getName());
-                    final PodWatcher podWatcher = queue.take();
-                    System.out.println("3  waiting for " + resource.getKind() + ":" + resource.getMetadata().getName());
+                    //The deletion of possible previous pods won't require events as there will be none
+                    getClient().pods().getPodWatcherQueue().take();
+                    //Now we send an event to the resulting controller PodWatcher
+                    final PodWatcher controllerPodWatcher = getClient().pods().getPodWatcherQueue().take();
                     String kind = resource.getKind();
                     String name = resource.getMetadata().getName();
                     if (resource instanceof EntandoCustomResourceReference) {
@@ -173,13 +163,13 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                     Pod pod = this.getClient().pods().loadPod(getKubernetesClient().getNamespace(), kind, name);
                     if (resource.getMetadata().getName().equals(componentNameToFail)) {
                         pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
-                        podWatcher.eventReceived(Action.MODIFIED, pod);
+                        controllerPodWatcher.eventReceived(Action.MODIFIED, pod);
                     } else {
-                        podWatcher.eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
+                        controllerPodWatcher.eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
                     }
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }, 100, TimeUnit.MILLISECONDS);
 

@@ -9,22 +9,6 @@ pipelineConfig:
       value: "entando-docker-image-info-v6.3"
     - name: ENTANDO_K8S_OPERATOR_SECURITY_MODE
       value: "strict"
-    - name: RELATED_IMAGE_RHEL8_MYSQL_80
-      value: registry.redhat.io/rhel8/mysql-80@sha256:162662b43ebc94e30f9ac66a57b143b192aebd65bb96cf44b1d54dd140563cd6
-    - name: RELATED_IMAGE_RHEL8_POSTGRESQL_12
-      value: registry.redhat.io/rhel8/postgresql-12@sha256:c6b6da4f762c2f68bfe558efe954739438ffa2e9aae1c617b50011fb0eed8347
-    - name: RELATED_IMAGE_ENTANDO_K8S_DBJOB
-      value: entando/entando-k8s-dbjob@sha256:660d3af5b44fb3d443b36f58515b880210517fa4e3061925a41c46ea552d61d2
-    - name: RELATED_IMAGE_ENTANDO_REDHAT_SSO
-      value: entando/entando-redhat-sso@sha256:a67ca13039479dbc13cd68380e4e33fa316397df20e96375c9b77e6022bd442e
-    - name: RELATED_IMAGE_ENTANDO_K8S_SERVICE
-      value: entando/entando-k8s-service@sha256:f0280ee845571eac1f5b673a67ba757b87e5eac7ca743daab7f3e4f1ac54a1b6
-    - name: RELATED_IMAGE_ENTANDO_K8S_KEYCLOAK_CONTROLLER
-      value: entando/entando-k8s-keycloak-controller@sha256:d96d50d9e7abb84b3f4b1e8c007553a7d7abd17ef1d7d78b5c939da57d537100
-    - name: RELATED_IMAGE_ENTANDO_K8S_PLUGIN_CONTROLLER
-      value: entando/entando-k8s-plugin-controller@sha256:9f03b459dd893035f0c131890fe3570b0802b0451772a19e5e954e8f42749d5c
-    - name: RELATED_IMAGE_CLUSTER_INFRASTRUCTURE_CONTROLLER
-      value: entando/entando-k8s-cluster-infrastructure-controller@sha256:e35a40e92d8d50350fec3266f1b397a6aa020087530baaa4c907d9f9fd7d5169
     - name: ENTANDO_TEST_REDHAT_REGISTRY_CREDENTIALS
       valueFrom:
         secretKeyRef:

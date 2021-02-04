@@ -22,18 +22,13 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - "pods/exec"
-    verbs:
-      - "get"
-  - apiGroups:
-      - ""
-    resources:
       - pods
       - services
       - endpoints
       - persistentvolumeclaims
       - configmaps
       - serviceaccounts
+      - events
     verbs:
       - "*"
   - apiGroups:
@@ -44,25 +39,22 @@ rules:
     verbs:
       - "*"
   - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+  - apiGroups:
       - extensions
     resources:
       - ingresses
     verbs:
       - "*"
-{{- if .Values.supportOpenshift }}
-  - apiGroups:
-      - route.openshift.io
-    resources:
-      - "routes"
-      - "routes/custom-host"
-    verbs:
-      - "*"
-{{- end }}
   - apiGroups:
       - ""
     resources:
       - namespaces
-      - serviceaccounts
+      - pods/exec
     verbs:
       - get
   - apiGroups:
@@ -78,3 +70,12 @@ rules:
     verbs:
       - get
       - create
+{{- if .Values.supportOpenshift }}
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - "routes"
+      - "routes/custom-host"
+    verbs:
+      - "*"
+{{- end }}

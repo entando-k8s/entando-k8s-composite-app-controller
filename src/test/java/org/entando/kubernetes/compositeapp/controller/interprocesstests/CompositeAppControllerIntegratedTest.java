@@ -23,8 +23,11 @@ import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppControl
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
 import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
 import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +48,7 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
 
     @BeforeEach
     public void cleanup() {
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_IMAGE_PULL_SECRETS.getJvmSystemProperty(), "redhat-registry");
         this.client = (DefaultKubernetesClient) TestFixturePreparation.newClient().inNamespace(NAMESPACE);
         this.myHelper = new EntandoCompositeAppIntegrationTestHelper(client);
         clearNamespace();
@@ -64,6 +68,7 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
     public void stopListening() {
         myHelper.afterTest();
         client.close();
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_COMPLIANCE_MODE.getJvmSystemProperty());
     }
 
     @Override
@@ -78,6 +83,14 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
         return EntandoPluginOperationFactory.produceAllEntandoPlugins(getKubernetesClient())
                 .inNamespace(NAMESPACE)
                 .create(resource);
+    }
+
+    protected void clearNamespace() {
+        TestFixturePreparation.prepareTestFixture(getKubernetesClient(),
+                deleteAll(EntandoCompositeApp.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoDatabaseService.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoPlugin.class).fromNamespace(NAMESPACE)
+                        .deleteAll(EntandoKeycloakServer.class).fromNamespace(NAMESPACE));
     }
 
 }

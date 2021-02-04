@@ -18,12 +18,16 @@ profiles:
     - image: entando/entando-k8s-composite-app-controller
       docker:
         dockerfile: Dockerfile.jvm
+        buildArgs:
+          VERSION: "{{ .VERSION}}"
 - name: native
   build:
     artifacts:
     - image: entando/entando-k8s-composite-app-controller
       docker:
         dockerfile: Dockerfile.native
+        buildArgs:
+          VERSION: "{{ .VERSION}}"
 - name: dev
   build:
     tagPolicy:

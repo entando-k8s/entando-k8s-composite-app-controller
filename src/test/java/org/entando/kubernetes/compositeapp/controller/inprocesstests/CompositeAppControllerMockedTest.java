@@ -26,17 +26,20 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
+import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.entando.kubernetes.client.PodWatcher;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
-import org.entando.kubernetes.controller.KubeUtils;
-import org.entando.kubernetes.controller.inprocesstest.k8sclientdouble.PodClientDouble;
-import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.support.client.PodWaitingClient;
+import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.test.support.PodBehavior;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
@@ -45,6 +48,7 @@ import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFac
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Tags;
@@ -59,6 +63,14 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     public KubernetesServer server = new KubernetesServer(false, true);
     private String componentNameToFail;
     private EntandoCompositeAppController entandoCompositeAppController;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
+
+    @AfterEach
+    void shutdown() {
+        PodWaitingClient.ENQUEUE_POD_WATCH_HOLDERS.set(false);
+        getClient().pods().getPodWatcherQueue().clear();
+        scheduler.shutdownNow();
+    }
 
     @Override
     public synchronized SimpleK8SClient<?> getClient() {
@@ -93,7 +105,6 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     @BeforeEach
     void setUp() {
         EntandoOperatorConfig.getOperatorConfigMapNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(), s));
-        clearNamespace();
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }
 
@@ -102,7 +113,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         //Given that EntandoPlugin deployments will fail
         this.componentNameToFail = "reference-to-" + PLUGIN_NAME;
         //When I deploy the EntandoCompositeApp
-        super.testExecuteControllerPod();
+        super.testExecuteControllerPod(EntandoOperatorComplianceMode.COMMUNITY);
         //Its overall status is reflected as failed
         assertThat(
                 getClient().entandoResources().load(EntandoCompositeApp.class, NAMESPACE, MY_APP).getStatus().getEntandoDeploymentPhase(),
@@ -132,30 +143,35 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                 .inNamespace(getKubernetesClient().getNamespace()).create(resource);
     }
 
-    protected void emulatePodBehavior(List<EntandoBaseCustomResource> components) {
-        PodClientDouble.setEmulatePodWatching(true);
-        new Thread(() -> {
-            for (EntandoBaseCustomResource resource : components) {
-                //Wait for deletion which will complete without an even as there would be no existing pods to delete
-                await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().getAndSet(null) != null);
-                //Now wait for deployer pod which needs specific behaviour to emulate
-                await().atMost(300, TimeUnit.SECONDS).until(() -> getClient().pods().getPodWatcherHolder().get() != null);
-                String kind = resource.getKind();
-                String name = resource.getMetadata().getName();
-                if (resource instanceof EntandoCustomResourceReference) {
-                    EntandoCustomResourceReference ref = (EntandoCustomResourceReference) resource;
-                    kind = ref.getSpec().getTargetKind();
-                    name = ref.getSpec().getTargetName();
+    protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable>> components) {
+        PodWaitingClient.ENQUEUE_POD_WATCH_HOLDERS.set(true);
+        scheduler.schedule(() -> {
+            try {
+                //Now we take the podWatchers from the queue in the correct sequence.
+                for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
+                    //The deletion of possible previous pods won't require events as there will be none
+                    getClient().pods().getPodWatcherQueue().take();
+                    //Now we send an event to the resulting controller PodWatcher
+                    final PodWatcher controllerPodWatcher = getClient().pods().getPodWatcherQueue().take();
+                    String kind = resource.getKind();
+                    String name = resource.getMetadata().getName();
+                    if (resource instanceof EntandoCustomResourceReference) {
+                        EntandoCustomResourceReference ref = (EntandoCustomResourceReference) resource;
+                        kind = ref.getSpec().getTargetKind();
+                        name = ref.getSpec().getTargetName();
+                    }
+                    Pod pod = this.getClient().pods().loadPod(getKubernetesClient().getNamespace(), kind, name);
+                    if (resource.getMetadata().getName().equals(componentNameToFail)) {
+                        pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
+                        controllerPodWatcher.eventReceived(Action.MODIFIED, pod);
+                    } else {
+                        controllerPodWatcher.eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
+                    }
                 }
-                Pod pod = this.getClient().pods().loadPod(getKubernetesClient().getNamespace(), kind, name);
-                if (resource.getMetadata().getName().equals(componentNameToFail)) {
-                    pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
-                    getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, pod);
-                } else {
-                    getClient().pods().getPodWatcherHolder().getAndSet(null).eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
-                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-        }).start();
+        }, 100, TimeUnit.MILLISECONDS);
 
     }
 

@@ -58,7 +58,7 @@ public class ImageVersionPreparation {
     }
 
     private String getConfigMapNamespace() {
-        return EntandoOperatorConfig.getOperatorConfigMapNamespace().orElse(AbstractCompositeAppControllerTest.NAMESPACE);
+        return EntandoOperatorConfig.getEntandoDockerImageInfoNamespace().orElse(AbstractCompositeAppControllerTest.NAMESPACE);
     }
 
     private String ensureImageInfoPresent(ConfigMap versionConfigMap, String imageName, String fallbackVersion)

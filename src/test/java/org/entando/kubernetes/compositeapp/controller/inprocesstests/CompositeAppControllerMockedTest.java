@@ -39,14 +39,15 @@ import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMod
 import org.entando.kubernetes.controller.support.client.PodWaitingClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.controller.test.support.PodBehavior;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.test.common.PodBehavior;
 import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,7 +105,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
 
     @BeforeEach
     void setUp() {
-        EntandoOperatorConfig.getOperatorConfigMapNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(), s));
+        EntandoOperatorConfig.getEntandoDockerImageInfoNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(), s));
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }
 

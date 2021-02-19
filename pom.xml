@@ -64,8 +64,7 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando-k8s-operator-common.version>6.3.1</entando-k8s-operator-common.version>
-        <entando-k8s-custom-model.version>6.3.0</entando-k8s-custom-model.version>
+        <entando-k8s-operator-common.version>6.3.4</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>post-deployment</postDeploymentTestGroups>
         <skipLicenseDownload>true</skipLicenseDownload>
@@ -76,11 +75,6 @@
         <url>https://github.com/${github.organization}/${project.artifactId}/issues/</url>
     </issueManagement>
     <dependencies>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>entando-k8s-custom-model</artifactId>
-            <version>${entando-k8s-custom-model.version}</version>
-        </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>entando-k8s-operator-common</artifactId>
@@ -188,6 +182,14 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.0.0-M1</version></plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <source>9</source>
+                <target>9</target>
+            </configuration>
+        </plugin>
     </plugins>
     </build>
   </project>

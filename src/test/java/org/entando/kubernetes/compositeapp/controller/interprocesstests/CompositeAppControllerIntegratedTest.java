@@ -18,11 +18,11 @@ package org.entando.kubernetes.compositeapp.controller.interprocesstests;
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.entando.kubernetes.client.EntandoOperatorTestConfig;
+import org.entando.kubernetes.client.EntandoOperatorTestConfig.TestTarget;
+import org.entando.kubernetes.client.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig;
-import org.entando.kubernetes.controller.integrationtest.support.EntandoOperatorTestConfig.TestTarget;
-import org.entando.kubernetes.controller.integrationtest.support.TestFixturePreparation;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;

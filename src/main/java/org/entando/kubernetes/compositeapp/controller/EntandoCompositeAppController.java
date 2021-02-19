@@ -27,6 +27,7 @@ import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.logging.Level;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -34,6 +35,7 @@ import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.EntandoResourceClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
+import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.controller.support.controller.AbstractDbAwareController;
@@ -90,6 +92,11 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
             if (PodResult.of(pod).hasFailed()) {
                 String message = logFailure(resource);
                 throw new EntandoControllerException(message);
+            } else if (EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()) {
+                getClient().pods()
+                        .removeSuccessfullyCompletedPods(namespace, Map.of(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
+                                KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
+                                resource.getKind(), resource.getMetadata().getName()));
             }
         }
     }

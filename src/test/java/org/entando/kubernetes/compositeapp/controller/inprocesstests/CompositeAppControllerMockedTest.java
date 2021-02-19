@@ -21,9 +21,13 @@ import static org.hamcrest.Matchers.is;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
+import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
@@ -41,9 +45,11 @@ import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.model.DbmsVendor;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
+import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
@@ -109,6 +115,11 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
     }
 
+    @AfterEach
+    void cleanup() {
+        System.clearProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty());
+    }
+
     @Test
     void testFailure() throws JsonProcessingException {
         //Given that EntandoPlugin deployments will fail
@@ -124,6 +135,44 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                 .inNamespace(getKubernetesClient().getNamespace()).withName(MY_APP).get().getStatus().forServerQualifiedBy(PLUGIN_NAME)
                 .get().hasFailed(), is(true));
 
+    }
+
+    @Test
+    void shouldRemoveSuccessfullyCompletedPods() throws JsonProcessingException {
+        //Given that I have configured the operator to garbage collect controller pods
+        System.setProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_GC_CONTROLLER_PODS.getJvmSystemProperty(), "true");
+        //When I create an EntandoCompositeApp with a EntandoKeycloakServer as a component
+        KubernetesClient client = getKubernetesClient();
+        EntandoCompositeApp appToCreate = new EntandoCompositeAppBuilder()
+                .withNewMetadata().withName(MY_APP).withNamespace(client.getNamespace()).endMetadata()
+                .withNewSpec()
+                .addNewEntandoKeycloakServer()
+                .withNewMetadata().withName(KEYCLOAK_NAME)
+                .endMetadata()
+                .withNewSpec()
+                .withDefault(true)
+                .withDbms(DbmsVendor.NONE)
+                .withIngressHostName(KEYCLOAK_NAME + ".test.com")
+                .endSpec()
+                .endEntandoKeycloakServer()
+                .addNewEntandoCustomResourceReference()
+                .withNewMetadata()
+                .withName("reference-to-" + PLUGIN_NAME)
+                .endMetadata()
+                .withNewSpec()
+                .withTargetKind("EntandoPlugin")
+                .withTargetName(PLUGIN_NAME)
+                .endSpec()
+                .endEntandoCustomResourceReference()
+                .endSpec()
+                .build();
+        EntandoCompositeApp app = performCreate(appToCreate);
+        //Then I expect the keycloak controller pod to be removed automatically
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
+                .inNamespace(client.getNamespace())
+                .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
+                .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
+        await().ignoreExceptions().atMost(60, TimeUnit.SECONDS).until(() -> keycloakControllerList.list().getItems().size() == 0);
     }
 
     private void startController() {
@@ -166,7 +215,9 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                         pod.setStatus(new PodStatusBuilder().withPhase("Failed").build());
                         controllerPodWatcher.eventReceived(Action.MODIFIED, pod);
                     } else {
-                        controllerPodWatcher.eventReceived(Action.MODIFIED, podWithSucceededStatus(pod));
+                        controllerPodWatcher.eventReceived(Action.MODIFIED,
+                                getKubernetesClient().pods().inNamespace(pod.getMetadata().getNamespace())
+                                        .withName(pod.getMetadata().getName()).patch(podWithSucceededStatus(pod)));
                     }
                 }
             } catch (InterruptedException e) {

@@ -40,6 +40,7 @@ import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.controller.support.controller.AbstractDbAwareController;
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
+import org.entando.kubernetes.controller.support.controller.DefaultControllerImageResolver;
 import org.entando.kubernetes.controller.support.controller.EntandoControllerException;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.EntandoBaseFluent;
@@ -81,7 +82,7 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
 
     @Override
     protected void synchronizeDeploymentState(EntandoCompositeApp newCompositeApp) {
-        ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient);
+        ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient, new DefaultControllerImageResolver());
         for (EntandoBaseCustomResource<?> resource : newCompositeApp.getSpec().getComponents()) {
             if (resource instanceof EntandoCustomResourceReference) {
                 resource = prepareReference(newCompositeApp, resource);

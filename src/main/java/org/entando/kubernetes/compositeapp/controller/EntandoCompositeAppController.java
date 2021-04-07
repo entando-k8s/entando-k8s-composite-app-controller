@@ -37,7 +37,6 @@ import org.entando.kubernetes.controller.support.client.EntandoResourceClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.controller.support.controller.AbstractDbAwareController;
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
 import org.entando.kubernetes.controller.support.controller.DefaultControllerImageResolver;
@@ -143,14 +142,9 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
     private <S extends Serializable, T extends EntandoBaseCustomResource<S>> T prepareReference(EntandoCompositeApp newCompositeApp,
             T component) {
         EntandoCustomResourceReference ref = (EntandoCustomResourceReference) component;
-        component = k8sClient.entandoResources().load(this.<S, T>resolveType(ref.getSpec().getTargetKind()),
+        return k8sClient.entandoResources().load(this.<S, T>resolveType(ref.getSpec().getTargetKind()),
                 ref.getSpec().getTargetNamespace().orElse(newCompositeApp.getMetadata().getNamespace()),
                 ref.getSpec().getTargetName());
-        if (KubeUtils.resolveProcessingInstruction(component) == OperatorProcessingInstruction.DEFER) {
-            component.getMetadata().getAnnotations().remove(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
-            component = k8sClient.entandoResources().createOrPatchEntandoResource(component);
-        }
-        return component;
     }
 
     @SuppressWarnings("unchecked")

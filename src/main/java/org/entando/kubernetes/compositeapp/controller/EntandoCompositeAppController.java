@@ -37,6 +37,7 @@ import org.entando.kubernetes.controller.support.client.EntandoResourceClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
+import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
 import org.entando.kubernetes.controller.support.controller.AbstractDbAwareController;
 import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
 import org.entando.kubernetes.controller.support.controller.DefaultControllerImageResolver;
@@ -92,13 +93,25 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
             if (PodResult.of(pod).hasFailed()) {
                 String message = logFailure(resource);
                 throw new EntandoControllerException(message);
-            } else if (EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()) {
-                getClient().pods()
-                        .removeSuccessfullyCompletedPods(namespace, Map.of(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
-                                KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
-                                resource.getKind(), resource.getMetadata().getName()));
+            } else {
+                if (KubeUtils.resolveProcessingInstruction(resource) == OperatorProcessingInstruction.DEFER) {
+                    removeDeferInstruction(resource);
+                }
+                if (EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()) {
+                    getClient().pods()
+                            .removeSuccessfullyCompletedPods(namespace,
+                                    Map.of(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
+                                            KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
+                                            resource.getKind(), resource.getMetadata().getName()));
+                }
             }
         }
+    }
+
+    private void removeDeferInstruction(EntandoBaseCustomResource<?> resource) {
+        final EntandoBaseCustomResource<?> reloaded = k8sClient.entandoResources().reload(resource);
+        reloaded.getMetadata().getAnnotations().remove(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
+        k8sClient.entandoResources().createOrPatchEntandoResource(reloaded);
     }
 
     private String logFailure(EntandoBaseCustomResource<?> resource) {

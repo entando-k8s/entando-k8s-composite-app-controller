@@ -14,16 +14,12 @@
  *
  */
 
-package org.entando.kubernetes.compositeapp.controller.interprocesstests;
+package org.entando.kubernetes.compositeapp.controller;
 
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
-import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
-import org.entando.kubernetes.test.e2etest.helpers.E2ETestHelperBase;
+import org.entando.kubernetes.model.common.EntandoCustomResource;
 
-public class EntandoCompositeAppIntegrationTestHelper extends
-        E2ETestHelperBase<EntandoCompositeApp> {
+public interface ControllerImageResolver {
 
-    public EntandoCompositeAppIntegrationTestHelper(DefaultKubernetesClient client) {
-        super(client, EntandoCompositeApp.class);
-    }
+    String getControllerImageFor(EntandoCustomResource customResource);
+
 }

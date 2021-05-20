@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>6.3.19</version>
+        <version>0.0.0-SNAPSHOT-PR-3-4</version>
         <relativePath/>
     </parent>
     <version>6.3.0-SNAPSHOT</version>
@@ -64,7 +64,7 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando-k8s-operator-common.version>6.3.19</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>6.3.0-SNAPSHOT</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>post-deployment</postDeploymentTestGroups>
         <skipLicenseDownload>true</skipLicenseDownload>
@@ -153,10 +153,9 @@
             <classifier>tests</classifier>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>17.0.0</version>
-            <scope>compile</scope>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <profiles>

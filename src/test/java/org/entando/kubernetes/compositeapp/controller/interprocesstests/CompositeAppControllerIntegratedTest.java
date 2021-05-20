@@ -16,20 +16,20 @@
 
 package org.entando.kubernetes.compositeapp.controller.interprocesstests;
 
+import static org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig.*;
+
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.entando.kubernetes.client.EntandoOperatorTestConfig;
-import org.entando.kubernetes.client.EntandoOperatorTestConfig.TestTarget;
-import org.entando.kubernetes.client.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
+import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
+import org.entando.kubernetes.controller.support.client.impl.EntandoOperatorTestConfig;
+import org.entando.kubernetes.controller.support.client.impl.integrationtesthelpers.TestFixturePreparation;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
-import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
-import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -56,11 +56,11 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
     }
 
     private void registerListeners() {
-        if (EntandoOperatorTestConfig.getTestTarget() == TestTarget.K8S) {
+        if (getTestTarget() == TestTarget.K8S) {
             myHelper.listenAndRespondWithImageVersionUnderTest(NAMESPACE);
         } else {
-            EntandoCompositeAppController controller = new EntandoCompositeAppController(getKubernetesClient(), false);
-            myHelper.listenAndRespondWithStartupEvent(NAMESPACE, controller::onStartup);
+            EntandoCompositeAppController controller = new EntandoCompositeAppController(new DefaultSimpleK8SClient(getKubernetesClient()));
+            myHelper.listenAndRun(NAMESPACE, controller);
         }
     }
 
@@ -73,14 +73,14 @@ class CompositeAppControllerIntegratedTest extends AbstractCompositeAppControlle
 
     @Override
     protected EntandoCompositeApp performCreate(EntandoCompositeApp resource) {
-        return EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
+        return getKubernetesClient().customResources(EntandoCompositeApp.class)
                 .inNamespace(NAMESPACE)
                 .create(resource);
     }
 
     @Override
     protected EntandoPlugin performCreate(EntandoPlugin resource) {
-        return EntandoPluginOperationFactory.produceAllEntandoPlugins(getKubernetesClient())
+        return getKubernetesClient().customResources(EntandoPlugin.class)
                 .inNamespace(NAMESPACE)
                 .create(resource);
     }

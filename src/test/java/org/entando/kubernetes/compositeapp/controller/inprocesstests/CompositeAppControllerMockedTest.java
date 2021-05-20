@@ -16,41 +16,42 @@
 
 package org.entando.kubernetes.compositeapp.controller.inprocesstests;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.Watcher.Action;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
-import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.entando.kubernetes.client.PodWatcher;
 import org.entando.kubernetes.compositeapp.controller.AbstractCompositeAppControllerTest;
 import org.entando.kubernetes.compositeapp.controller.EntandoCompositeAppController;
 import org.entando.kubernetes.controller.spi.common.EntandoOperatorComplianceMode;
+import org.entando.kubernetes.controller.spi.common.EntandoOperatorSpiConfigProperty;
 import org.entando.kubernetes.controller.support.client.PodWaitingClient;
 import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
+import org.entando.kubernetes.controller.support.client.impl.DefaultSimpleK8SClient;
+import org.entando.kubernetes.controller.support.client.impl.PodWatcher;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
-import org.entando.kubernetes.model.DbmsVendor;
-import org.entando.kubernetes.model.EntandoBaseCustomResource;
-import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.common.DbmsVendor;
+import org.entando.kubernetes.model.common.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.common.EntandoCustomResourceStatus;
+import org.entando.kubernetes.model.common.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppBuilder;
-import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppOperationFactory;
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.test.common.PodBehavior;
@@ -79,7 +80,6 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         scheduler.shutdownNow();
     }
 
-    @Override
     public synchronized SimpleK8SClient<?> getClient() {
         return entandoCompositeAppController.getClient();
     }
@@ -91,7 +91,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
 
     private void ensureNamespace(KubernetesClient client, String namespace) {
         if (client.namespaces().withName(namespace).get() == null) {
-            client.namespaces().createNew().withNewMetadata().withName(namespace).endMetadata().done();
+            client.namespaces().create(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build());
         }
     }
 
@@ -112,7 +112,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     @BeforeEach
     void setUp() {
         EntandoOperatorConfig.getEntandoDockerImageInfoNamespace().ifPresent(s -> ensureNamespace(getKubernetesClient(), s));
-        entandoCompositeAppController = new EntandoCompositeAppController(getKubernetesClient(), false);
+        entandoCompositeAppController = new EntandoCompositeAppController(new DefaultSimpleK8SClient(getKubernetesClient()));
     }
 
     @AfterEach
@@ -128,10 +128,10 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
         super.testExecuteControllerPod(EntandoOperatorComplianceMode.COMMUNITY);
         //Its overall status is reflected as failed
         assertThat(
-                getClient().entandoResources().load(EntandoCompositeApp.class, NAMESPACE, MY_APP).getStatus().getEntandoDeploymentPhase(),
+                getClient().entandoResources().load(EntandoCompositeApp.class, NAMESPACE, MY_APP).getStatus().getPhase(),
                 is(EntandoDeploymentPhase.FAILED));
         //And the WebServerStatus associated with the Plugin has failed
-        assertThat(EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
+        assertThat(getKubernetesClient().customResources(EntandoCompositeApp.class)
                 .inNamespace(getKubernetesClient().getNamespace()).withName(MY_APP).get().getStatus().forServerQualifiedBy(PLUGIN_NAME)
                 .get().hasFailed(), is(true));
 
@@ -168,7 +168,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                 .build();
         EntandoCompositeApp app = performCreate(appToCreate);
         //Then I expect the keycloak controller pod to be removed automatically
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
@@ -176,29 +176,30 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
     }
 
     private void startController() {
-        entandoCompositeAppController.onStartup(new StartupEvent());
+        entandoCompositeAppController.run();
     }
 
     private void prepareSystemProperties(EntandoCompositeApp resource) {
         System.setProperty(KubeUtils.ENTANDO_RESOURCE_ACTION, Action.ADDED.name());
-        System.setProperty(KubeUtils.ENTANDO_RESOURCE_NAMESPACE, resource.getMetadata().getNamespace());
-        System.setProperty(KubeUtils.ENTANDO_RESOURCE_NAME, resource.getMetadata().getName());
+        System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAMESPACE.getJvmSystemProperty(),
+                resource.getMetadata().getNamespace());
+        System.setProperty(EntandoOperatorSpiConfigProperty.ENTANDO_RESOURCE_NAME.getJvmSystemProperty(), resource.getMetadata().getName());
     }
 
     private EntandoCompositeApp generateUidAndCreate(EntandoCompositeApp resource) {
         if (resource.getMetadata().getUid() == null) {
             resource.getMetadata().setUid(RandomStringUtils.randomAlphanumeric(8));
         }
-        return EntandoCompositeAppOperationFactory.produceAllEntandoCompositeApps(getKubernetesClient())
+        return getKubernetesClient().customResources(EntandoCompositeApp.class)
                 .inNamespace(getKubernetesClient().getNamespace()).create(resource);
     }
 
-    protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable>> components) {
+    protected void emulatePodBehavior(List<EntandoBaseCustomResource<? extends Serializable, EntandoCustomResourceStatus>> components) {
         PodWaitingClient.ENQUEUE_POD_WATCH_HOLDERS.set(true);
         scheduler.schedule(() -> {
             try {
                 //Now we take the podWatchers from the queue in the correct sequence.
-                for (EntandoBaseCustomResource<? extends Serializable> resource : components) {
+                for (EntandoBaseCustomResource<? extends Serializable, EntandoCustomResourceStatus> resource : components) {
                     //The deletion of possible previous pods won't require events as there will be none
                     getClient().pods().getPodWatcherQueue().take();
                     //Now we send an event to the resulting controller PodWatcher

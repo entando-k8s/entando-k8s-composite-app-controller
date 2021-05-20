@@ -21,16 +21,15 @@ import static java.lang.String.format;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import io.fabric8.kubernetes.api.builder.Builder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher.Action;
-import io.quarkus.runtime.StartupEvent;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.logging.Level;
-import javax.enterprise.event.Observes;
+import java.util.logging.Logger;
 import javax.inject.Inject;
+import org.entando.kubernetes.controller.spi.common.EntandoControllerException;
 import org.entando.kubernetes.controller.spi.common.PodResult;
 import org.entando.kubernetes.controller.spi.common.ResourceUtils;
 import org.entando.kubernetes.controller.support.client.EntandoResourceClient;
@@ -38,83 +37,78 @@ import org.entando.kubernetes.controller.support.client.SimpleK8SClient;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.support.common.KubeUtils;
 import org.entando.kubernetes.controller.support.common.OperatorProcessingInstruction;
-import org.entando.kubernetes.controller.support.controller.AbstractDbAwareController;
-import org.entando.kubernetes.controller.support.controller.ControllerExecutor;
-import org.entando.kubernetes.controller.support.controller.DefaultControllerImageResolver;
-import org.entando.kubernetes.controller.support.controller.EntandoControllerException;
-import org.entando.kubernetes.model.EntandoBaseCustomResource;
-import org.entando.kubernetes.model.EntandoBaseFluent;
-import org.entando.kubernetes.model.EntandoIngressingDeploymentBaseFluent;
-import org.entando.kubernetes.model.NestedIngressingDeploymentSpecFluent;
-import org.entando.kubernetes.model.WebServerStatus;
+import org.entando.kubernetes.model.common.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.common.EntandoBaseFluent;
+import org.entando.kubernetes.model.common.EntandoCustomResourceStatus;
+import org.entando.kubernetes.model.common.EntandoIngressingDeploymentBaseFluent;
+import org.entando.kubernetes.model.common.ExposedServerStatus;
+import org.entando.kubernetes.model.common.NestedIngressingDeploymentSpecFluent;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
-import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppSpec;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeAppSpecFluent;
 import org.entando.kubernetes.model.compositeapp.EntandoCustomResourceReference;
-import org.jetbrains.annotations.NotNull;
+import picocli.CommandLine;
 
-public class EntandoCompositeAppController extends AbstractDbAwareController<EntandoCompositeAppSpec, EntandoCompositeApp> {
+@CommandLine.Command()
+public class EntandoCompositeAppController implements Runnable {
 
     private final String namespace;
+    private final SimpleK8SClient<EntandoResourceClient> client;
+    private final Logger logger = Logger.getLogger(EntandoCompositeAppController.class.getName());
 
     @Inject
-    public EntandoCompositeAppController(KubernetesClient kubernetesClient) {
-        this(kubernetesClient, true);
-    }
-
-    /**
-     * This constructor is intended for in-process tests where we do not want the controller to exit automatically.
-     */
-    public EntandoCompositeAppController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
-        super(kubernetesClient, exitAutomatically);
-        this.namespace = kubernetesClient.getNamespace();
-    }
-
-    //We know this won't ever break.
     @SuppressWarnings("unchecked")
-    public SimpleK8SClient<EntandoResourceClient> getClient() {
-        return (SimpleK8SClient<EntandoResourceClient>) super.k8sClient;
+    public EntandoCompositeAppController(SimpleK8SClient<?> client) {
+        this.client = (SimpleK8SClient<EntandoResourceClient>) client;
+        this.namespace = client.entandoResources().getNamespace();
     }
 
-    public void onStartup(@Observes StartupEvent event) {
-        processCommand();
+    public SimpleK8SClient<EntandoResourceClient> getClient() {
+        return this.client;
     }
 
     @Override
-    protected void synchronizeDeploymentState(EntandoCompositeApp newCompositeApp) {
-        ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient, new DefaultControllerImageResolver());
-        for (EntandoBaseCustomResource<?> resource : newCompositeApp.getSpec().getComponents()) {
-            if (resource instanceof EntandoCustomResourceReference) {
-                resource = prepareReference(newCompositeApp, resource);
-            } else {
-                resource = prepareComponent(newCompositeApp, resource);
-            }
-            Pod pod = processResource(newCompositeApp, executor, resource);
-            if (PodResult.of(pod).hasFailed()) {
-                String message = logFailure(resource);
-                throw new EntandoControllerException(message);
-            } else {
-                if (KubeUtils.resolveProcessingInstruction(resource) == OperatorProcessingInstruction.DEFER) {
-                    removeDeferInstruction(resource);
+    public void run() {
+        EntandoCompositeApp newCompositeApp = (EntandoCompositeApp) getClient().entandoResources()
+                .resolveCustomResourceToProcess(Collections.singletonList(EntandoCompositeApp.class));
+        try {
+            ControllerExecutor executor = new ControllerExecutor(namespace, getClient(), new DefaultControllerImageResolver());
+            for (EntandoBaseCustomResource<?, EntandoCustomResourceStatus> resource : newCompositeApp.getSpec().getComponents()) {
+                if (resource instanceof EntandoCustomResourceReference) {
+                    resource = prepareReference(newCompositeApp, resource);
+                } else {
+                    resource = prepareComponent(newCompositeApp, resource);
                 }
-                if (EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()) {
-                    getClient().pods()
-                            .removeSuccessfullyCompletedPods(namespace,
-                                    Map.of(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
-                                            KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
-                                            resource.getKind(), resource.getMetadata().getName()));
+                Pod pod = processResource(newCompositeApp, executor, resource);
+                if (PodResult.of(pod).hasFailed()) {
+                    String message = logFailure(resource);
+                    throw new EntandoControllerException(message);
+                } else {
+                    if (KubeUtils.resolveProcessingInstruction(resource) == OperatorProcessingInstruction.DEFER) {
+                        removeDeferInstruction(resource);
+                    }
+                    if (EntandoOperatorConfig.garbageCollectSuccessfullyCompletedPods()) {
+                        getClient().pods()
+                                .removeSuccessfullyCompletedPods(namespace,
+                                        Map.of(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind(),
+                                                KubeUtils.ENTANDO_RESOURCE_NAMESPACE_LABEL_NAME, resource.getMetadata().getNamespace(),
+                                                resource.getKind(), resource.getMetadata().getName()));
+                    }
                 }
             }
+        } catch (Exception e) {
+            getClient().entandoResources().deploymentFailed(newCompositeApp, e);
+            throw new CommandLine.ExecutionException(new CommandLine(this), e.getMessage());
+
         }
     }
 
-    private void removeDeferInstruction(EntandoBaseCustomResource<?> resource) {
-        final EntandoBaseCustomResource<?> reloaded = k8sClient.entandoResources().reload(resource);
+    private void removeDeferInstruction(EntandoBaseCustomResource<?, ?> resource) {
+        final EntandoBaseCustomResource<?, ?> reloaded = client.entandoResources().reload(resource);
         reloaded.getMetadata().getAnnotations().remove(KubeUtils.PROCESSING_INSTRUCTION_ANNOTATION_NAME);
-        k8sClient.entandoResources().createOrPatchEntandoResource(reloaded);
+        client.entandoResources().createOrPatchEntandoResource(reloaded);
     }
 
-    private String logFailure(EntandoBaseCustomResource<?> resource) {
+    private String logFailure(EntandoBaseCustomResource<?, EntandoCustomResourceStatus> resource) {
         String message = format("Unexpected exception occurred while adding %s %s/%s", resource.getKind(),
                 resource.getMetadata().getNamespace(),
                 resource.getMetadata().getName());
@@ -122,17 +116,18 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
         return message;
     }
 
-    @NotNull
-    private Pod processResource(EntandoCompositeApp newCompositeApp, ControllerExecutor executor, EntandoBaseCustomResource<?> resource) {
+    private Pod processResource(EntandoCompositeApp newCompositeApp, ControllerExecutor executor,
+            EntandoBaseCustomResource<?, ?> resource) {
         Pod pod = executor.runControllerFor(Action.ADDED, resource, null);
-        WebServerStatus webServerStatus = new WebServerStatus(resource.getMetadata().getName());
-        webServerStatus.setPodStatus(pod.getStatus());
+        ExposedServerStatus webServerStatus = new ExposedServerStatus(resource.getMetadata().getName());
+        webServerStatus.putPodPhase(pod.getMetadata().getName(), pod.getStatus().getPhase());
         getClient().entandoResources().updateStatus(newCompositeApp, webServerStatus);
         return pod;
     }
 
     @SuppressWarnings("unchecked")
-    private <S extends Serializable, C extends EntandoBaseCustomResource<S>> C prepareComponent(EntandoCompositeApp newCompositeApp,
+    private <S extends Serializable, C extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> C prepareComponent(
+            EntandoCompositeApp newCompositeApp,
             C component) {
         EntandoBaseFluent<?> componentBuilder = EntandoCompositeAppSpecFluent.newBuilderFrom(component);
         if (component.getMetadata().getNamespace() == null) {
@@ -149,19 +144,21 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
                 .withOwnerReferences(Collections.singletonList(ResourceUtils.buildOwnerReference(newCompositeApp)))
                 .endMetadata();
         component = ((Builder<C>) componentBuilder).build();
-        return k8sClient.entandoResources().createOrPatchEntandoResource(component);
+        return getClient().entandoResources().createOrPatchEntandoResource(component);
     }
 
-    private <S extends Serializable, T extends EntandoBaseCustomResource<S>> T prepareReference(EntandoCompositeApp newCompositeApp,
+    private <S extends Serializable, T extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> T prepareReference(
+            EntandoCompositeApp newCompositeApp,
             T component) {
         EntandoCustomResourceReference ref = (EntandoCustomResourceReference) component;
-        return k8sClient.entandoResources().load(this.<S, T>resolveType(ref.getSpec().getTargetKind()),
+        return getClient().entandoResources().load(this.<S, T>resolveType(ref.getSpec().getTargetKind()),
                 ref.getSpec().getTargetNamespace().orElse(newCompositeApp.getMetadata().getNamespace()),
                 ref.getSpec().getTargetName());
     }
 
     @SuppressWarnings("unchecked")
-    protected <S extends Serializable, T extends EntandoBaseCustomResource<S>> Class<T> resolveType(String kind) {
+    protected <S extends Serializable, T extends EntandoBaseCustomResource<S, EntandoCustomResourceStatus>> Class<T> resolveType(
+            String kind) {
         return (Class<T>) Arrays
                 .stream(EntandoBaseCustomResource.class.getAnnotation(JsonSubTypes.class).value())
                 .filter(type -> type.name().equals(kind))

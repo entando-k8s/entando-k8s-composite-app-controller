@@ -21,6 +21,7 @@ import static java.lang.String.format;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.Map;
 import org.entando.kubernetes.controller.support.common.EntandoOperatorConfig;
@@ -38,11 +39,12 @@ public class ImageVersionPreparation {
                 .withName(getVersionsConfigMapName())
                 .fromServer().get();
         if (versionConfigMap == null) {
-            getKubernetesClient().configMaps().inNamespace(getConfigMapNamespace()).createNew().withNewMetadata().withName(
-                    getVersionsConfigMapName()).withNamespace(getConfigMapNamespace()).endMetadata()
-                    .addToData(imageName, format(
-                            "{\"version\":\"%s\"}",
-                            fallbackVersion)).done();
+            getKubernetesClient().configMaps().inNamespace(getConfigMapNamespace())
+                    .create(new ConfigMapBuilder().withNewMetadata().withName(
+                            getVersionsConfigMapName()).withNamespace(getConfigMapNamespace()).endMetadata()
+                            .addToData(imageName, format(
+                                    "{\"version\":\"%s\"}",
+                                    fallbackVersion)).build());
             return fallbackVersion;
         } else {
             return ensureImageInfoPresent(versionConfigMap, imageName, fallbackVersion);
@@ -65,11 +67,13 @@ public class ImageVersionPreparation {
             throws JsonProcessingException {
         String imageInfo = versionConfigMap.getData().get(imageName);
         if (imageInfo == null) {
-            getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
-                    .withName(versionConfigMap.getMetadata().getName()).edit()
+            final ConfigMap configMap = new ConfigMapBuilder(
+                    getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
+                            .withName(versionConfigMap.getMetadata().getName()).get())
                     .addToData(imageName, format(
                             "{\"version\":\"%s\"}",
-                            fallbackVersion)).done();
+                            fallbackVersion)).build();
+            getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace()).patch(configMap);
             return fallbackVersion;
         } else {
             return ensureVersionAttributePresent(versionConfigMap, imageInfo, imageName, fallbackVersion);
@@ -84,9 +88,11 @@ public class ImageVersionPreparation {
         String version = (String) map.get("version");
         if (version == null) {
             map.put("version", fallbackVersion);
-            getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
-                    .withName(versionConfigMap.getMetadata().getName()).edit()
-                    .addToData(imageName, mapper.writeValueAsString(map)).done();
+            final ConfigMap configMap = new ConfigMapBuilder(
+                    getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace())
+                            .withName(versionConfigMap.getMetadata().getName()).get())
+                    .addToData(imageName, mapper.writeValueAsString(map)).build();
+            getKubernetesClient().configMaps().inNamespace(versionConfigMap.getMetadata().getNamespace()).patch(configMap);
             return fallbackVersion;
         } else {
             return version;

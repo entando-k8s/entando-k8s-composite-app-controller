@@ -1,0 +1,34 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.19.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JAVA-LOG4J-1300176:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-LOG4J-572732:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGGRAALVMSDK-1765539:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGGRAALVMSDK-1766172:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGGRAALVMSDK-1766242:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGJBOSSRESTEASY-1009963:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1061996:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1062507:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1083276:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1085642:
+    - '*':
+        reason: '.'

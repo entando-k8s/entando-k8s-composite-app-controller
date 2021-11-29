@@ -32,3 +32,12 @@ ignore:
   SNYK-JAVA-ORGKEYCLOAK-1085642:
     - '*':
         reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1061995:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1075057:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-1075058:
+    - '*':
+        reason: '.'

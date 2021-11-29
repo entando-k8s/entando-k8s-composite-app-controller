@@ -41,3 +41,9 @@ ignore:
   SNYK-JAVA-ORGKEYCLOAK-1075058:
     - '*':
         reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-568921:
+    - '*':
+        reason: '.'
+  SNYK-JAVA-ORGKEYCLOAK-565812:
+    - '*':
+        reason: '.'

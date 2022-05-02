@@ -133,7 +133,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 .build();
         EntandoCompositeApp app = performCreate(appToCreate);
         //Then I expect to see the keycloak controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());
@@ -163,7 +163,7 @@ public abstract class AbstractCompositeAppControllerTest implements FluentIntegr
                 () -> appGettable.fromServer().get().getStatus().forServerQualifiedBy(KEYCLOAK_NAME).get().getPodStatus() != null
         );
         //And the plugin controller pod
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> pluginControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> pluginControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoPlugin")
                 .withLabel("EntandoPlugin", PLUGIN_NAME);

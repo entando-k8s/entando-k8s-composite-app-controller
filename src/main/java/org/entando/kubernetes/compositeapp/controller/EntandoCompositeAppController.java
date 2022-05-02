@@ -89,9 +89,16 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
             } else {
                 resource = prepareComponent(newCompositeApp, resource);
             }
+
+            System.out.println("################################################");
+            System.out.println("##### NEW COMPOSITE APP: " + newCompositeApp);
+            System.out.println("################################################");
+            System.out.println("##### RESOURCE: " + resource);
+            System.out.println("################################################");
+
             Pod pod = processResource(newCompositeApp, executor, resource);
             if (PodResult.of(pod).hasFailed()) {
-                String message = logFailure(resource);
+                String message = logFailure(resource, pod);
                 throw new EntandoControllerException(message);
             } else {
                 if (KubeUtils.resolveProcessingInstruction(resource) == OperatorProcessingInstruction.DEFER) {
@@ -114,10 +121,11 @@ public class EntandoCompositeAppController extends AbstractDbAwareController<Ent
         k8sClient.entandoResources().createOrPatchEntandoResource(reloaded);
     }
 
-    private String logFailure(EntandoBaseCustomResource<?> resource) {
-        String message = format("Unexpected exception occurred while adding %s %s/%s", resource.getKind(),
+    private String logFailure(EntandoBaseCustomResource<?> resource, Pod pod) {
+        String message = format("Unexpected exception occurred while adding %s %s/%s. Failure reason: %s", resource.getKind(),
                 resource.getMetadata().getNamespace(),
-                resource.getMetadata().getName());
+                resource.getMetadata().getName(),
+                PodResult.of(pod).getFailReason());
         this.logger.log(Level.SEVERE, message);
         return message;
     }

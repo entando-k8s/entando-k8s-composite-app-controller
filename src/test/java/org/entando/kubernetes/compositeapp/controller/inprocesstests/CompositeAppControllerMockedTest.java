@@ -168,7 +168,7 @@ class CompositeAppControllerMockedTest extends AbstractCompositeAppControllerTes
                 .build();
         EntandoCompositeApp app = performCreate(appToCreate);
         //Then I expect the keycloak controller pod to be removed automatically
-        FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> keycloakControllerList = client.pods()
+        FilterWatchListDeletable<Pod, PodList, Boolean, Watch> keycloakControllerList = client.pods()
                 .inNamespace(client.getNamespace())
                 .withLabel(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, "EntandoKeycloakServer")
                 .withLabel("EntandoKeycloakServer", app.getSpec().getComponents().get(0).getMetadata().getName());

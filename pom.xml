@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.entando</groupId>
         <artifactId>entando-quarkus-parent</artifactId>
-        <version>6.3.19</version>
+        <version>6.5.0-ENG-3515-PR-26</version>
         <relativePath/>
     </parent>
     <version>6.5.0</version>
@@ -64,7 +64,7 @@
     <properties>
         <github.organization>entando-k8s</github.organization>
         <sonar.projectKey>${github.organization}_${project.artifactId}</sonar.projectKey>
-        <entando-k8s-operator-common.version>6.3.19</entando-k8s-operator-common.version>
+        <entando-k8s-operator-common.version>6.5.0-ENG-3515-PR-104</entando-k8s-operator-common.version>
         <preDeploymentTestGroups>pre-deployment</preDeploymentTestGroups>
         <postDeploymentTestGroups>post-deployment</postDeploymentTestGroups>
         <skipLicenseDownload>true</skipLicenseDownload>
@@ -190,6 +190,21 @@
                 <target>9</target>
             </configuration>
         </plugin>
+
+<!--        <plugin>-->
+<!--            <groupId>io.quarkus</groupId>-->
+<!--            <artifactId>quarkus-maven-plugin</artifactId>-->
+<!--            <version>2.6.3.Final</version>-->
+
+<!--            <configuration>-->
+<!--                <source>${maven.compiler.source}</source>-->
+<!--                <target>${maven.compiler.target}</target>-->
+<!--                <compilerArgs>-->
+<!--                    <arg>&#45;&#45;enable-preview</arg>-->
+<!--                </compilerArgs>-->
+<!--                <jvmArgs>&#45;&#45;enable-preview</jvmArgs>-->
+<!--            </configuration>-->
+<!--        </plugin>-->
     </plugins>
     </build>
   </project>
